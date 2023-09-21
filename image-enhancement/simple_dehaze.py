@@ -1,6 +1,11 @@
 # Bronte Sihan Li, 2023
 # This is largely based on the work of: https://github.com/Utkarsh-Deshmukh/Single-Image-Dehazing-Python/
 
+"""
+Simple implementation of dehazing algorithm.
+We use this to compare with the DehazeFormer model.
+"""
+
 import image_dehazer
 import cv2
 import os

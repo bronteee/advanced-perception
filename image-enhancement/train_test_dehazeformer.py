@@ -2,7 +2,11 @@
 # Some of the code is heavily inspired by the DehazeFormer repo (https://github.com/IDKiro/DehazeFormer/tree/main)
 
 """
+This is a wrapper script for training and testing the DehazeFormer models.
+We use the default settings from the DehazeFormer repo.
+
 Usage:
+For training and testing:
 python train_test_dehazeformer.py --model dehazeformer-s
 
 For test only on a pretrained model:
@@ -60,6 +64,9 @@ IMAGE_DIR = DATASET_DIR + 'UAV-train/paired_dehaze/images/'
 
 
 def train(train_loader, network, criterion, optimizer, scaler):
+    """
+    Training loop for the model
+    """
     losses = AverageMeter()
 
     torch.cuda.empty_cache()
@@ -85,6 +92,9 @@ def train(train_loader, network, criterion, optimizer, scaler):
 
 
 def valid(val_loader, network):
+    """
+    Validation loop for the model
+    """
     PSNR = AverageMeter()
 
     torch.cuda.empty_cache()
@@ -108,6 +118,9 @@ def valid(val_loader, network):
 
 
 def single(save_dir):
+    """
+    Helper function to load a single model from saved directory
+    """
     state_dict = torch.load(save_dir)['state_dict']
     new_state_dict = OrderedDict()
 
@@ -119,6 +132,9 @@ def single(save_dir):
 
 
 def test(test_loader, network, result_dir):
+    """
+    Testing loop for the model
+    """
     PSNR = AverageMeter()
     SSIM = AverageMeter()
 
@@ -171,7 +187,7 @@ def test(test_loader, network, result_dir):
         input_img = chw_to_hwc(input.detach().cpu().squeeze(0).numpy() * 0.5 + 0.5)
         out_img = chw_to_hwc(output.detach().cpu().squeeze(0).numpy())
         target_img = chw_to_hwc(target.detach().cpu().squeeze(0).numpy())
-        # concactenate output and target image
+        # Concactenate output and target image
         out_img = np.concatenate((input_img, out_img, target_img), axis=1)
         write_img(os.path.join(result_dir, 'imgs', f'dehaze_{filename}'), out_img)
 
