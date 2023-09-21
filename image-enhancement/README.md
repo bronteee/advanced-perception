@@ -1,5 +1,19 @@
 # Project 1 Image Enhancement: Single Image Haze Removal
 
+## (Bronte) Sihan Li, Cole Crescas, Karan Shah
+
+## Environment
+
+Training tasks are run in a Linux environment with a CUDA GPU.
+
+## Requirements
+
+To install dependencies, run:
+
+    pip install pytorch==1.10.2 torchvision torchaudio cudatoolkit==11.3
+    pip install -r requirements.txt
+    pip install image_dehazer
+
 ### Dehaze.ipynb
 - The main file for the project. It contains the code for data processing as well as training and testing the dehazeformer model.
 
