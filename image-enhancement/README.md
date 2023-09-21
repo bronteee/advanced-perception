@@ -1,6 +1,8 @@
 # Project 1 Image Enhancement: Single Image Haze Removal
 
 ## (Bronte) Sihan Li, Cole Crescas, Karan Shah
+## CS 7180
+### 2023-09-21
 
 ## Environment
 
@@ -16,6 +18,10 @@ To install dependencies, run:
 
 ### Dehaze.ipynb
 - The main file for the project. It contains the code for data processing as well as training and testing the dehazeformer model.
+- For our testing we configured the environment and processed images from our dataset into training and test sets using an 80-20 split.  
+- We then loaded the trained variations of models (-S, -B, -M) based on our dataset size and unfroze the last two layers for fine-tuning.  
+- We saw the best results using Dehazeformer-s fine-tuned with 2 layers unfrozen.  
+- In addition, we measured the training loss and PSNR through increasing epoch to achieve best results.
 
 ### train_test_dehazeformer.py
 - Wrapper script for training and testing the different dehazeformer models and write results to disc.

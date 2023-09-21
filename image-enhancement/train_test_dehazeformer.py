@@ -1,4 +1,6 @@
-# Bronte Sihan Li, 2023
+# Bronte Sihan Li, Cole Crescas, Karan Shah
+# 2023-09-23
+# CS 7180
 # Some of the code is heavily inspired by the DehazeFormer repo (https://github.com/IDKiro/DehazeFormer/tree/main)
 
 """
@@ -59,6 +61,7 @@ sys.path.append('Dehaze')
 from Dehaze.datasets.loader import PairLoader, SingleLoader
 from Dehaze.models import *
 
+#Path to our selected dataset and training images
 DATASET_DIR = 'data/a2i2/'
 IMAGE_DIR = DATASET_DIR + 'UAV-train/paired_dehaze/images/'
 
