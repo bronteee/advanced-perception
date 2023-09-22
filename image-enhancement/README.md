@@ -24,7 +24,8 @@ To install dependencies, run:
 - In addition, we measured the training loss and PSNR through increasing epoch to achieve best results.
 
 ### train_test_dehazeformer.py
-- Wrapper script for training and testing the different dehazeformer models and write results to disc.
+- Wrapper script for training and testing the different dehazeformer models and write results to disc. This assumes that the `data/a2i2/UAV-train/paired_dehaze/images/` directory and training images have been processed and split into training and validation sets using the `Dehaze.ipynb` notebook.
+  
 - Usage:
   - For training and testing:
   
