@@ -1,0 +1,4 @@
+shapely
+torchmetrics
+torch
+torchvision
