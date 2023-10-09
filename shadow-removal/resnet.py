@@ -1,4 +1,4 @@
-# Bronte Sihan Li, 2023
+# (Bronte) Sihan Li, Cole Crescas 2023
 
 import sys, os
 import torch

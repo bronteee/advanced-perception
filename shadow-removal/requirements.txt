@@ -2,3 +2,4 @@ shapely
 torchmetrics
 torch
 torchvision
+wandb

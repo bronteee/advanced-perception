@@ -3,3 +3,6 @@ data/
 Mask-ShdaowGAN/
 *.zip
 .DS_Store
+ShadowAttack/adv_img/
+ShadowAttack/dataset/
+ShadowAttack/tmp/
