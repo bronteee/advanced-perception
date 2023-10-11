@@ -20,7 +20,7 @@ parser.add_argument(
 parser.add_argument(
     "--test_dir",
     type=str,
-    default="adv_img/GTSRB",
+    default="./adv_img/GTSRB",
     help="The path to the test images",
 )
 
@@ -77,10 +77,17 @@ if __name__ == '__main__':
     plt.imshow(confusion_matrix, cmap=plt.cm.Blues)
     plt.xlabel('Predicted labels')
     plt.ylabel('True labels')
-    plt.xticks(np.range(43))
-    plt.yticks(np.range(43))
+    plt.xticks(np.arange(43))
+    plt.yticks(np.arange(43))
     plt.title('Confusion matrix')
+    # Add numbers
+    for i in range(43):
+        for j in range(43):
+            plt.text(j, i, confusion_matrix[i, j], ha='center', va='center')
     plt.colorbar()
-    plt.savefig('confusion_matrix.png')
+    # Save confusion matrix with padding
+    plt.tight_layout()
+    plt.gcf().set_size_inches(15, 15)
+    plt.savefig(f'{args.test_dir}_confusion_matrix.png', dpi=500)
 
     print('Test accuracy: {:.2f}%'.format(100.0 * correct / len(test_loader.dataset)))
