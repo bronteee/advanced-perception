@@ -45,10 +45,10 @@ Usage:
 
     python test_images.py --checkpoing_path <path_to_checkpoint> --test_dir <path_to_test_images>
 
-## DC-ShadowNet-Hard-and-Soft-Shadow-Removal/Cole_Helper/helpers.py
+## helpers.py
 
 This script contains multiple functions meant to be used as one off helper functions during data pre-processing.  Utilities include, moving files out of folders in a directory, changing the type of images and others. 
 
-## DC-ShadowNet-Hard-and-Soft-Shadow-Removal/Cole_Helper/pre_processing.py
+## pre_processing.py
 
 This script filters data using color based shadow detection with a shadow threshold.  We used this to take unfiltered images into folders for testing and shadow removal.  After running this, the shadow removal model can be run for testing.
