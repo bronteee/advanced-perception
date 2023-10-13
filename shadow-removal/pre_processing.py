@@ -6,7 +6,7 @@ CS 7180
 This script filters data using color based shadow detection with a shadow threshold. 
 We used this to take unfiltered images into folders for testing and shadow removal. 
 After running this, the shadow removal model from 
-this linkhttps://github.com/jinyeying/DC-ShadowNet-Hard-and-Soft-Shadow-Removal can be run for testing.
+this link https://github.com/jinyeying/DC-ShadowNet-Hard-and-Soft-Shadow-Removal can be run for testing.
 """
 
 ## File pre-processing
