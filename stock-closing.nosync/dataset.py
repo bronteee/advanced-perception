@@ -16,6 +16,14 @@ MAX_SECONDS = 55  # Maximum number of seconds * 10 in a window
 def load_and_clean_data(
     data_filepath: str, fillna: Literal['zero', 'mean'] = 'mean'
 ) -> pd.DataFrame:
+    """
+    Load and clean data from csv file.
+    Args:
+        data_filepath (string): Path to the csv file with stock data.
+        fillna (string): How to fill NaN values. Default: 'mean'.
+    Returns:
+        data (DataFrame): Cleaned data.
+    """
     # Load data from csv file
     data = pd.read_csv(data_filepath)
     # Drop features
