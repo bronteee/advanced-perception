@@ -1,10 +1,42 @@
 import torch
 import pandas as pd
 import numpy as np
+from typing import Literal
 
 DATA_FILE_DIR = 'data/optiver-trading-at-the-close/train.csv'
-DROP_FEATURES = ['far_price', 'near_price', 'time_id', 'row_id']
+DROP_FEATURES = [
+    # 'far_price',
+    # 'near_price',
+    'time_id',
+    'row_id',
+]
 MAX_SECONDS = 55  # Maximum number of seconds * 10 in a window
+
+
+def load_and_clean_data(
+    data_filepath: str, fillna: Literal['zero', 'mean'] = 'mean'
+) -> pd.DataFrame:
+    """
+    Load and clean data from csv file.
+    Args:
+        data_filepath (string): Path to the csv file with stock data.
+        fillna (string): How to fill NaN values. Default: 'mean'.
+    Returns:
+        data (DataFrame): Cleaned data.
+    """
+    # Load data from csv file
+    data = pd.read_csv(data_filepath)
+    # Drop features
+    data = data.drop(columns=DROP_FEATURES)
+    if fillna == 'zero':
+        # Replace all NaN values with 0
+        data = data.fillna(0)
+    elif fillna == 'mean':
+        # Replace all NaN values in far_price and near_price with column mean
+        data = data.fillna(data.mean())
+    else:
+        raise ValueError(f"fillna must be 'zero' or 'mean', not {fillna}.")
+    return data
 
 
 class StockDataset(torch.utils.data.Dataset):
@@ -18,13 +50,7 @@ class StockDataset(torch.utils.data.Dataset):
             data_filepath (string): Path to the csv file with stock data.
             window_size (int): Size of the window in 10 seconds for the stock data. Default: 10.
         """
-        # Load data from csv file
-        data = pd.read_csv(data_filepath)
-        # Drop features
-        data = data.drop(columns=DROP_FEATURES)
-        # Replace all NaN values with 0
-        data = data.fillna(0)
-
+        data = load_and_clean_data(data_filepath)
         self.data = data.drop(columns=["target"]).to_numpy()
         self.targets = data["target"].to_numpy()
         assert window_size > 0, "Window size must be greater than 0."
