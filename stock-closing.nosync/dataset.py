@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 
 DATA_FILE_DIR = 'data/optiver-trading-at-the-close/train.csv'
-DROP_FEATURES = ['far_price', 'near_price', 'time_id', 'row_id']
+#DROP_FEATURES = ['far_price', 'near_price', 'time_id', 'row_id']
 MAX_SECONDS = 55  # Maximum number of seconds * 10 in a window
 
 
@@ -21,9 +21,13 @@ class StockDataset(torch.utils.data.Dataset):
         # Load data from csv file
         data = pd.read_csv(data_filepath)
         # Drop features
-        data = data.drop(columns=DROP_FEATURES)
+        #data = data.drop(columns=DROP_FEATURES)
         # Replace all NaN values with 0
-        data = data.fillna(0)
+        data = data.fillna(0, inplace=True)
+
+        null_counts_after_handling = df.isnull().sum()
+        print("Null Value Counts After Handling:\n", null_counts_after_handling)
+        data['row_id'] = data['row_id'].str.replace('_', '').astype(int)
 
         self.data = data.drop(columns=["target"]).to_numpy()
         self.targets = data["target"].to_numpy()
