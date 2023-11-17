@@ -45,6 +45,8 @@ class StockDataset(torch.utils.data.Dataset):
             window = self.data[idx - self.window_size : idx, :]
         # Convert window to tensor
         window = torch.from_numpy(window).float()
+        # Expand window dimensions to (1, window_size, num_features)
+        window = torch.unsqueeze(window, 0)
         # Get target and convert to numpy array
         target = self.targets[idx].reshape(1)
         # Convert target to tensor
