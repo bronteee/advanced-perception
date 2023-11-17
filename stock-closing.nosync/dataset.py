@@ -3,7 +3,12 @@ import pandas as pd
 import numpy as np
 
 DATA_FILE_DIR = 'data/optiver-trading-at-the-close/train.csv'
-DROP_FEATURES = ['far_price', 'near_price', 'time_id', 'row_id']
+DROP_FEATURES = [
+    # 'far_price',
+    # 'near_price',
+    'time_id',
+    'row_id',
+]
 MAX_SECONDS = 55  # Maximum number of seconds * 10 in a window
 
 
@@ -40,7 +45,10 @@ class StockDataset(torch.utils.data.Dataset):
         if idx <= self.window_size:
             # If the index is less than the window size, pad with zeros
             window = np.zeros((self.window_size, self.data.shape[1]))
-            window[-idx:, :] = self.data[:idx, :]
+            if idx == 0:
+                window[-1, :] = self.data[0, :]
+            else:
+                window[-idx:, :] = self.data[:idx, :]
         else:
             window = self.data[idx - self.window_size : idx, :]
         # Convert window to tensor
@@ -59,7 +67,15 @@ if __name__ == '__main__':
     dataset = StockDataset(DATA_FILE_DIR)
     print(len(dataset))
     train_loader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True)
-    for batch_idx, (data, target) in enumerate(train_loader):
-        print(data.shape)
-        print(target.shape)
-        break
+    # for batch_idx, (data, target) in enumerate(train_loader):
+    #     if (
+    #         data.shape[0] != 64
+    #         or data.shape[1] != 1
+    #         or data.shape[2] != 10
+    #         or data.shape[3] != 14
+    #     ):
+    #         print(data.shape)
+    #         print(target.shape)
+    #         print(batch_idx)
+    #         break
+    print(dataset.__getitem__(0))
