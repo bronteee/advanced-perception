@@ -78,4 +78,4 @@ if __name__ == '__main__':
     #         print(target.shape)
     #         print(batch_idx)
     #         break
-    print(dataset.__getitem__(0))
+
