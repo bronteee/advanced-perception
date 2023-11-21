@@ -118,12 +118,34 @@ class StockS4(nn.Module):
         x = self.decoder(x)  # (B, d_model) -> (B, d_output)
 
         return x
+    
+class LSTMRegressor(nn.Module):
+    def __init__(self, input_size=14, hidden_size=64, num_layers=2, output_size=1):
+        super(LSTMRegressor, self).__init__()
+        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
+        self.fc = nn.Linear(hidden_size, output_size)
+
+    def forward(self, x):
+        # Reshape input to (batch_size * sequence_length, input_size)
+        x = x.view(x.size(0), -1, x.size(-1))
+        
+        # LSTM layer
+        lstm_out, _ = self.lstm(x)
+        
+        # Take the output from the last time step
+        last_hidden_state = lstm_out[:, -1, :]
+        
+        # Fully connected layer
+        output = self.fc(last_hidden_state)
+        return output
 
 
 if __name__ == '__main__':
     # Test the model
-    model = ResCNN()
+    # model = ResCNN()
     # model = StockS4()
+    model = LSTMRegressor()
+    
     print(model)
     # Test dataset
     dataset = StockDataset(DATA_FILE_DIR)
