@@ -23,7 +23,7 @@ class ResCNN(nn.Module):
         self.layer3 = nn.Sequential(nn.Conv2d(8, 32, kernel_size=1), nn.LeakyReLU(0.3))
         self.layer4 = nn.Sequential(nn.Conv2d(32, 2, kernel_size=1), nn.LeakyReLU(0.3))
         self.pl = nn.AvgPool2d((5, 2))
-        self.fc = nn.Linear(24, 1)
+        self.fc = nn.Linear(28, 1)
         self.tanh = nn.Tanh()
 
     def forward(self, x):
@@ -122,8 +122,8 @@ class StockS4(nn.Module):
 
 if __name__ == '__main__':
     # Test the model
-    # model = ResCNN()
-    model = StockS4()
+    model = ResCNN()
+    # model = StockS4()
     print(model)
     # Test dataset
     dataset = StockDataset(DATA_FILE_DIR)
