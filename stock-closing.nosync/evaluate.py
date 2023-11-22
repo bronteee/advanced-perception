@@ -3,16 +3,15 @@ from pathlib import Path
 import os
 import numpy as np
 from tqdm import tqdm
-from dataset import StockDataset
-from models import ResCNN, StockS4
+from models import ResCNN, StockS4, LSTMRegressor
 
 model_mapping = {
     'rescnn': ResCNN,
     's4': StockS4,
+    'LSTM': LSTMRegressor
 }
 
 TEST_DATA_DIR = Path('./data/train.csv')
-
 
 @torch.inference_mode()
 def evaluate(
@@ -59,10 +58,9 @@ def evaluate(
     net.train()
     return val_loss / max(num_val_batches, 1)
 
-
 def main():
-    checkpoint_file = 'checkpoint_epoch2_6.473762512207031.pth'
-    model_tyoe = 'rescnn'
+    checkpoint_file = 'checkpoint_epoch9_nan.pth'
+    model_tyoe = 'LSTM'
     criterion = torch.nn.L1Loss()
     # Instantiate the model
     checkpoint_dir = './checkpoints'
