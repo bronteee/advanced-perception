@@ -7,11 +7,12 @@ import random
 import numpy as np
 from pathlib import Path
 from dataset import StockDataset, DATA_FILE_DIR
-from models import ResCNN, StockS4
-from evaluate import evaluate
+from models import ResCNN, StockS4, LSTMRegressor
+from evaluate import evaluate, model_mapping
 import pytorch_warmup as warmup
 from wandb import Artifact
 from tqdm import tqdm
+from torch.utils.data import DataLoader, random_split
 
 dir_checkpoint = Path('checkpoints')
 log_dir = Path('logs')
@@ -104,12 +105,17 @@ def train(
 ):
     # Create dataset and dataloader
     dataset = StockDataset(DATA_FILE_DIR, window_size=window_size)
-    train_set, val_set = torch.utils.data.random_split(
-        dataset,
-        [1 - val_percent, val_percent],
-    )
-    print(len(train_set))
-    print(len(val_set))
+    total_length = len(dataset)
+    n_val = int(val_percent * total_length)
+    n_train = total_length - n_val
+
+    # Use the calculated lengths to split the dataset
+    train_set, val_set = random_split(dataset, [n_train, n_val])
+
+    # Print lengths for verification
+    print("Total dataset length:", total_length)
+    print("Train set length:", len(train_set))
+    print("Validation set length:", len(val_set))
     n_train = len(train_set)
     train_loader = torch.utils.data.DataLoader(
         train_set,
@@ -195,6 +201,7 @@ def train(
         optimizer.load_state_dict(optimizer_state_dict)
     global_step = 0
     warmup_scheduler = warmup.UntunedLinearWarmup(optimizer)
+
     # Train model
     for epoch in range(1, epochs + 1):
         torch.set_grad_enabled(True)
@@ -265,7 +272,7 @@ def train(
 
 
 def main():
-    epochs = 50
+    epochs = 10
     batch_size = 128
     lr = 0.001
     val_percent = 0.2
@@ -276,6 +283,8 @@ def main():
     loss_function = 'mae'
     activation = 'relu'
     # model_type = 'rescnn'
+    # model_type = 's4'
+    model_type = 'LSTM'
 
     seed_all(seed=seed)
 
