@@ -15,10 +15,6 @@ from tqdm import tqdm
 
 dir_checkpoint = Path('checkpoints')
 log_dir = Path('logs')
-model_mapping = {
-    'rescnn': ResCNN,
-    's4': StockS4,
-}
 seed = 42
 
 

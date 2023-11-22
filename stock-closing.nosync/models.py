@@ -5,7 +5,6 @@ from torch.autograd import grad
 from dataset import StockDataset, DATA_FILE_DIR
 from s4.s4d_torch import S4D
 
-
 class ResCNN(nn.Module):
     """
     Defines a residual CNN architecture for stock prediction.

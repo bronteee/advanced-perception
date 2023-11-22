@@ -3,6 +3,15 @@ from pathlib import Path
 import os
 import numpy as np
 from tqdm import tqdm
+from dataset import StockDataset
+from models import ResCNN, StockS4
+
+model_mapping = {
+    'rescnn': ResCNN,
+    's4': StockS4,
+}
+
+TEST_DATA_DIR = Path('./data/train.csv')
 
 
 @torch.inference_mode()
@@ -49,3 +58,30 @@ def evaluate(
 
     net.train()
     return val_loss / max(num_val_batches, 1)
+
+
+def main():
+    checkpoint_file = 'checkpoint_epoch2_6.473762512207031.pth'
+    model_tyoe = 'rescnn'
+    criterion = torch.nn.L1Loss()
+    # Instantiate the model
+    checkpoint_dir = './checkpoints'
+    model = model_mapping[model_tyoe]()
+    # Load the model checkpoint
+    model_state_dict = torch.load(f'{checkpoint_dir}/{checkpoint_file}')[
+        'model_state_dict'
+    ]
+    model.load_state_dict(model_state_dict)
+    # Load the test data
+    test_set = StockDataset(TEST_DATA_DIR)
+    test_loader = torch.utils.data.DataLoader(test_set, batch_size=128, shuffle=False)
+    # Evaluate the model
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    val_loss = evaluate(
+        model, test_loader, device, False, 128, criterion, len(test_set), False
+    )
+    print(f'Validation loss: {val_loss}')
+
+
+if __name__ == '__main__':
+    main()
