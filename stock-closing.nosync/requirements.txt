@@ -1,0 +1,7 @@
+einops
+wandb
+pytorch-warmup
+tqdm
+torch
+numpy
+pandas

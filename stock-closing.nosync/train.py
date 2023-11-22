@@ -8,7 +8,7 @@ import numpy as np
 from pathlib import Path
 from dataset import StockDataset, DATA_FILE_DIR
 from models import ResCNN, StockS4, LSTMRegressor
-from evaluate import evaluate
+from evaluate import evaluate, model_mapping
 import pytorch_warmup as warmup
 from wandb import Artifact
 from tqdm import tqdm
@@ -16,11 +16,6 @@ from torch.utils.data import DataLoader, random_split
 
 dir_checkpoint = Path('checkpoints')
 log_dir = Path('logs')
-model_mapping = {
-    'rescnn': ResCNN,
-    's4': StockS4,
-    'LSTM': LSTMRegressor
-}
 seed = 42
 
 
@@ -33,6 +28,57 @@ def seed_all(seed):
     random.seed(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
+
+
+def setup_optimizer(model, lr, weight_decay, epochs):
+    """
+    S4 requires a specific optimizer setup.
+
+    The S4 layer (A, B, C, dt) parameters typically
+    require a smaller learning rate (typically 0.001), with no weight decay.
+
+    The rest of the model can be trained with a higher learning rate (e.g. 0.004, 0.01)
+    and weight decay (if desired).
+    """
+
+    # All parameters in the model
+    all_parameters = list(model.parameters())
+
+    # General parameters don't contain the special _optim key
+    params = [p for p in all_parameters if not hasattr(p, "_optim")]
+
+    # Create an optimizer with the general parameters
+    optimizer = torch.optim.AdamW(params, lr=lr, weight_decay=weight_decay)
+
+    # Add parameters with special hyperparameters
+    hps = [getattr(p, "_optim") for p in all_parameters if hasattr(p, "_optim")]
+    hps = [
+        dict(s)
+        for s in sorted(list(dict.fromkeys(frozenset(hp.items()) for hp in hps)))
+    ]  # Unique dicts
+    for hp in hps:
+        params = [p for p in all_parameters if getattr(p, "_optim", None) == hp]
+        optimizer.add_param_group({"params": params, **hp})
+
+    # Create a lr scheduler
+    # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=patience, factor=0.2)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, epochs)
+
+    # Print optimizer info
+    keys = sorted(set([k for hp in hps for k in hp.keys()]))
+    for i, g in enumerate(optimizer.param_groups):
+        group_hps = {k: g.get(k, None) for k in keys}
+        print(
+            ' | '.join(
+                [
+                    f"Optimizer group {i}",
+                    f"{len(g['params'])} tensors",
+                ]
+                + [f"{k} {v}" for k, v in group_hps.items()]
+            )
+        )
+
+    return optimizer, scheduler
 
 
 def train(
@@ -124,6 +170,7 @@ def train(
         Use warmup: {use_warmup}
         """
     )
+    num_steps = len(train_loader) * epochs
     # Set up optimizer
     if optimizer == 'adamw':
         optimizer = torch.optim.AdamW(
@@ -132,6 +179,13 @@ def train(
             weight_decay=weight_decay,
             amsgrad=True,
             foreach=True,
+        )
+        lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer, T_max=num_steps
+        )
+    elif optimizer == 's4':
+        optimizer, lr_scheduler = setup_optimizer(
+            model, lr=learning_rate, weight_decay=weight_decay, epochs=epochs
         )
     else:
         raise ValueError(f'Optimizer {optimizer} not supported.')
@@ -145,13 +199,9 @@ def train(
     # Set up scheduler
     if optimizer_state_dict:
         optimizer.load_state_dict(optimizer_state_dict)
-    num_steps = len(train_loader) * epochs
-    lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer, T_max=num_steps
-    )
     global_step = 0
     warmup_scheduler = warmup.UntunedLinearWarmup(optimizer)
-    
+
     # Train model
     for epoch in range(1, epochs + 1):
         torch.set_grad_enabled(True)
@@ -227,12 +277,13 @@ def main():
     lr = 0.001
     val_percent = 0.2
     amp = True
-    optimizer = 'adamw'
+    model_type = 's4'
+    optimizer = 's4' if model_type == 's4' else 'adamw'
     optimizer_state_dict = None
     loss_function = 'mae'
     activation = 'relu'
-    #model_type = 'rescnn'
-    #model_type = 's4'
+    # model_type = 'rescnn'
+    # model_type = 's4'
     model_type = 'LSTM'
 
     seed_all(seed=seed)
