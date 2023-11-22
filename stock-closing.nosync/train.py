@@ -200,7 +200,10 @@ def train(
     if optimizer_state_dict:
         optimizer.load_state_dict(optimizer_state_dict)
     global_step = 0
-    warmup_scheduler = warmup.UntunedLinearWarmup(optimizer)
+    if use_warmup:
+        warmup_scheduler = warmup.UntunedLinearWarmup(optimizer)
+    else:
+        warmup_scheduler = None
 
     # Train model
     for epoch in range(1, epochs + 1):
@@ -218,7 +221,10 @@ def train(
                 loss.backward()
                 optimizer.step()
                 optimizer.zero_grad(set_to_none=True)
-                with warmup_scheduler.dampening():
+                if warmup_scheduler:
+                    with warmup_scheduler.dampening():
+                        lr_scheduler.step()
+                else:
                     lr_scheduler.step()
                 pbar.update(features.shape[0])
                 global_step += 1
@@ -276,7 +282,7 @@ def main():
     batch_size = 128
     lr = 0.001
     val_percent = 0.2
-    amp = True
+    amp = False
     model_type = 's4'
     optimizer = 's4' if model_type == 's4' else 'adamw'
     optimizer_state_dict = None
