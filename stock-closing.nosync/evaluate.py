@@ -4,6 +4,9 @@ import os
 import numpy as np
 from tqdm import tqdm
 
+# Global variable to store the best validation loss
+best_val_loss = float('inf')
+
 
 @torch.inference_mode()
 def evaluate(
@@ -43,9 +46,18 @@ def evaluate(
                 pred,
                 target,
             )
-            # TODO
-            # if save_predictions:
-            # Save predictions as np
+    
+    # Calculate average validation loss
+    avg_val_loss = val_loss / max(num_val_batches, 1)
 
-    net.train()
-    return val_loss / max(num_val_batches, 1)
+    # Check if the current model is better than the best one so far
+    if avg_val_loss < best_val_loss:
+        best_val_loss = avg_val_loss
+
+        # Save the best model checkpoint
+        save_dir = Path('best_checkpoints')
+        os.makedirs(save_dir, exist_ok=True)
+        checkpoint_path = save_dir / f'best_checkpoint.pth'
+        torch.save(net.state_dict(), checkpoint_path)
+
+    return avg_val_loss
