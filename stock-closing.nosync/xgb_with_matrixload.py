@@ -1,11 +1,12 @@
 import xgboost as xgb
 import pandas as pd
-from dataset import DATA_FILE_DIR
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error
+from sklearn.model_selection import RandomizedSearchCV
+import lightgbm as lgb
 
 # Load the large CSV file
-df = pd.read_csv(DATA_FILE_DIR)
+df = pd.read_csv('/notebooks/rapids/xgboost/train_added_features.csv')
 df = df.fillna(df.mean())
 
 # Assuming the target variable is in the 'target' column
@@ -26,7 +27,8 @@ param_dist = {
     'eta': [0.1, 0.2, 0.3],
     'subsample': [0.7, 0.8, 0.9],
     'colsample_bytree': [0.7, 0.8, 0.9],
-    'num_rounds': [50, 100, 150],
+    'tree_method': ["gpu_hist"],  # Use GPU acceleration
+    #'device': ['gpu'],
 }
 
 # Create an XGBoost regressor
@@ -44,7 +46,7 @@ random_search.fit(X_train, y_train)
 best_params = random_search.best_params_
 
 # Train the XGBoost model with the best hyperparameters
-best_model = xgb.train(best_params, dtrain, best_params['num_rounds'])
+best_model = xgb.train(best_params, dtrain, 100)
 
 # Make predictions on the test set
 dtest = xgb.DMatrix(X_test)
@@ -52,4 +54,34 @@ y_pred = best_model.predict(dtest)
 
 # Evaluate the model using Mean Absolute Error
 mae = mean_absolute_error(y_test, y_pred)
-print(f'Mean Absolute Error with Hyperparameter Tuning: {mae}')
+print(f'Mean Absolute Error with Hyperparameter Tuning with XGBoost: {mae}')
+
+#------------------------------ Light GBM model -------------------------------------------
+
+# LightGBM dataset
+train_data = lgb.Dataset(X_train, label=y_train)
+val_data = lgb.Dataset(X_val, label=y_val, reference=train_data)
+
+# Set parameters for LightGBM
+lgb_params = {
+    'objective': 'regression',
+    'metric': 'mae',
+    'boosting_type': 'gbdt',
+    'num_leaves': 31,
+    'learning_rate': 0.05,
+    'feature_fraction': 0.9,
+    'bagging_fraction': 0.8,
+    'bagging_freq': 5,
+    'verbose': 0,
+}
+
+# Train the LightGBM model
+num_round = 1000  # You can adjust this based on your dataset
+bst = lgb.train(lgb_params, train_data, num_round, valid_sets=[val_data], early_stopping_rounds=20)
+
+# Make predictions on the validation set
+y_pred = bst.predict(X_val, num_iteration=bst.best_iteration)
+
+# Calculate MAE on the validation set
+mae = mean_absolute_error(y_val, y_pred)
+print(f'Mean Absolute Error on Validation Set with LGBM: {mae}')
