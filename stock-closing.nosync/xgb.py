@@ -3,23 +3,23 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 from numpy import absolute
-from dataset import load_and_clean_data, DATA_FILE_DIR
+from dataset import DATA_FILE_DIR
 from sklearn.model_selection import RepeatedKFold, cross_val_score, GridSearchCV
 
-save_dir = "models/"
+save_dir = "/notebooks/advanced-perception/stock-closing.nosync/models/"
 seed = 42
 
-train_data = load_and_clean_data(DATA_FILE_DIR)
+train_data = pd.read_csv(DATA_FILE_DIR)
 
 param_grid = {
-    "max_depth": [3, 5, 7],
-    "learning_rate": [0.01, 0.05, 0.1],
-    "n_estimators": [100, 500, 1000],
-    "colsample_bytree": [0.5, 0.7, 0.8],
-    "subsample": [0.5, 0.7, 0.8],
+    "max_depth": [3, 5],
+    "learning_rate": [0.03, 0.05],
+    "n_estimators": [50, 100],
+    "colsample_bytree": [0.5, 0.7],
+    "subsample": [0.3, 0.5],
 }
 grid_search = GridSearchCV(
-    estimator=XGBRegressor(seed=42),
+    estimator=XGBRegressor(seed),
     param_grid=param_grid,
     scoring="neg_mean_absolute_error",
     n_jobs=-1,

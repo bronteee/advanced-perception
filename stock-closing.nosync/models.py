@@ -119,7 +119,7 @@ class StockS4(nn.Module):
         return x
     
 class LSTMRegressor(nn.Module):
-    def __init__(self, input_size=14, hidden_size=64, num_layers=2, output_size=1):
+    def __init__(self, input_size=124, hidden_size=64, num_layers=2, output_size=1):
         super(LSTMRegressor, self).__init__()
         self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
         self.fc = nn.Linear(hidden_size, output_size)
@@ -137,6 +137,28 @@ class LSTMRegressor(nn.Module):
         # Fully connected layer
         output = self.fc(last_hidden_state)
         return output
+    
+
+class SimpleTransformer(nn.Module):
+    def __init__(self, feature_num=124, d_model=64, nhead=8, num_layers=1):
+        super(SimpleTransformer, self).__init__()
+        self.embedding = nn.Linear(feature_num, d_model)
+        self.tf1 = nn.Transformer(d_model=d_model, nhead=nhead, num_encoder_layers=num_layers, batch_first=True)
+        self.fc = nn.Linear(d_model, d_model)
+        self.dropout = nn.Dropout(0.5)
+        self.tf2 = nn.Transformer(d_model=d_model, nhead=nhead, num_encoder_layers=num_layers, batch_first=True)
+        self.decoder = nn.Linear(d_model, 1)
+
+    def forward(self, x):
+        x = self.embedding(x)
+        x = x.permute(0, 2, 1)  # Correct the dimensions
+        x = self.tf1(x)
+        x = self.fc(x[:, -1, :])  # Use the last sequence output
+        x = self.dropout(x)
+        x = self.tf2(x)
+        x = self.decoder(x)
+        return x
+
 
 
 if __name__ == '__main__':
@@ -144,21 +166,21 @@ if __name__ == '__main__':
     # model = ResCNN()
     # model = StockS4()
     model = LSTMRegressor()
+    # model = SimpleTransformer()
     
     print(model)
+        
     # Test dataset
-    dataset = StockDataset(DATA_FILE_DIR)
+    dataset = StockDataset(DATA_FILE_DIR, window_size=10)
     train_loader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True)
+    
     for batch_idx, (data, target) in enumerate(train_loader):
         print(data.shape)
         print(target.shape)
-        # combine last 2 dimensions
-        # data = data.view(
-        #     data.shape[0],
-        #     -1,
-        #     data.shape[1],
-        # )
-        # print(data.shape)
+        
+        # Ensure data is in the expected shape [batch_size, sequence_length, num_features]
+        data = data.squeeze(1)  # Remove the singleton dimension (1) for the channel
         output = model(data)
+        
         print(output.shape)
         break
