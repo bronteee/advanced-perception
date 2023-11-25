@@ -60,7 +60,7 @@ print(f'Mean Absolute Error with Hyperparameter Tuning with XGBoost: {mae}')
 
 # LightGBM dataset
 train_data = lgb.Dataset(X_train, label=y_train)
-val_data = lgb.Dataset(X_val, label=y_val, reference=train_data)
+val_data = lgb.Dataset(X_test, label=y_test, reference=train_data)
 
 # Set parameters for LightGBM
 lgb_params = {
@@ -77,7 +77,7 @@ lgb_params = {
 
 # Train the LightGBM model
 num_round = 1000  # You can adjust this based on your dataset
-bst = lgb.train(lgb_params, train_data, num_round, valid_sets=[val_data], early_stopping_rounds=20)
+bst = lgb.train(lgb_params, train_data, num_round, valid_sets=[val_data])
 
 # Make predictions on the validation set
 y_pred = bst.predict(X_val, num_iteration=bst.best_iteration)
