@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from typing import Literal
 
-DATA_FILE_DIR = '/notebooks/advanced-perception/stock-closing.nosync/data/train_added_features.csv'
+DATA_FILE_DIR = './data/train_added_features.csv'
 # DROP_FEATURES = [
 #     # 'far_price',
 #     # 'near_price',
@@ -13,7 +13,7 @@ MAX_SECONDS = 55  # Maximum number of seconds * 10 in a window
 
 
 # def load_and_clean_data(
-#     data_filepath: str, fillna: Literal['zero', 'mean'] = 'mean', 
+#     data_filepath: str, fillna: Literal['zero', 'mean'] = 'mean',
 #     add_features_flag: bool = True) -> pd.DataFrame:
 #     """
 #     Load and clean data from csv file.
@@ -70,7 +70,7 @@ class StockDataset(torch.utils.data.Dataset):
             window_size (int): Size of the window in 10 seconds for the stock data. Default: 10.
         """
         data = pd.read_csv(data_filepath)
-        #data = data.drop(columns=DROP_FEATURES) not needed, already removed in added features training csv
+        # data = data.drop(columns=DROP_FEATURES) not needed, already removed in added features training csv
         self.data = data.drop(columns=["target"]).to_numpy()
         self.targets = data["target"].to_numpy()
         assert window_size > 0, "Window size must be greater than 0."
@@ -109,12 +109,6 @@ if __name__ == '__main__':
     print(len(dataset))
     train_loader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True)
     for batch_idx, (data, target) in enumerate(train_loader):
-        # if (
-        #     data.shape[0] != 64
-        #     or data.shape[1] != 1
-        #     or data.shape[2] != 10
-        #     or data.shape[3] != 14
-        # ):
         print(data.shape)
         print(target.shape)
         print(batch_idx)

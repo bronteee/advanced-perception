@@ -5,6 +5,7 @@ from torch.autograd import grad
 from dataset import StockDataset, DATA_FILE_DIR
 from s4.s4d_torch import S4D
 
+
 class ResCNN(nn.Module):
     """
     Defines a residual CNN architecture for stock prediction.
@@ -45,8 +46,8 @@ class ResCNN(nn.Module):
 class StockS4(nn.Module):
     def __init__(
         self,
-        d_input=1, # Number of channels, 1 for this dataset
-        d_output=1, # Number of outputs, 1 for this dataset
+        d_input=1,  # Number of channels, 1 for this dataset
+        d_output=1,  # Number of outputs, 1 for this dataset
         d_model=256,
         n_layers=4,
         dropout=0.2,
@@ -79,11 +80,13 @@ class StockS4(nn.Module):
         """
         Input x is shape (Batch, Length, d_input)
         """
+        print(x.shape)
         x = x.view(
             x.shape[0],
             -1,
-            x.shape[1],
+            1,  # Reshape to (Batch, Length, d_input=1) for our data set
         )
+        print(x.shape)
         x = self.encoder(x)  # (B, L, d_input) -> (B, L, d_model)
 
         x = x.transpose(-1, -2)  # (B, L, d_model) -> (B, d_model, L)
@@ -117,7 +120,8 @@ class StockS4(nn.Module):
         x = self.decoder(x)  # (B, d_model) -> (B, d_output)
 
         return x
-    
+
+
 class LSTMRegressor(nn.Module):
     def __init__(self, input_size=124, hidden_size=64, num_layers=2, output_size=1):
         super(LSTMRegressor, self).__init__()
@@ -127,60 +131,68 @@ class LSTMRegressor(nn.Module):
     def forward(self, x):
         # Reshape input to (batch_size * sequence_length, input_size)
         x = x.view(x.size(0), -1, x.size(-1))
-        
+
         # LSTM layer
         lstm_out, _ = self.lstm(x)
-        
+
         # Take the output from the last time step
         last_hidden_state = lstm_out[:, -1, :]
-        
+
         # Fully connected layer
         output = self.fc(last_hidden_state)
         return output
-    
+
 
 class SimpleTransformer(nn.Module):
     def __init__(self, feature_num=124, d_model=64, nhead=8, num_layers=1):
         super(SimpleTransformer, self).__init__()
         self.embedding = nn.Linear(feature_num, d_model)
-        self.tf1 = nn.Transformer(d_model=d_model, nhead=nhead, num_encoder_layers=num_layers, batch_first=True)
+        self.tf1 = nn.Transformer(
+            d_model=d_model,
+            nhead=nhead,
+            num_encoder_layers=num_layers,
+            batch_first=True,
+        )
         self.fc = nn.Linear(d_model, d_model)
         self.dropout = nn.Dropout(0.5)
-        self.tf2 = nn.Transformer(d_model=d_model, nhead=nhead, num_encoder_layers=num_layers, batch_first=True)
+        self.tf2 = nn.Transformer(
+            d_model=d_model,
+            nhead=nhead,
+            num_encoder_layers=num_layers,
+            batch_first=True,
+        )
         self.decoder = nn.Linear(d_model, 1)
 
     def forward(self, x):
         x = self.embedding(x)
-        x = x.permute(0, 2, 1)  # Correct the dimensions
-        x = self.tf1(x)
+        x = self.tf1.encoder(x)
         x = self.fc(x[:, -1, :])  # Use the last sequence output
         x = self.dropout(x)
-        x = self.tf2(x)
+        x = self.tf2.encoder(x)
         x = self.decoder(x)
         return x
-
 
 
 if __name__ == '__main__':
     # Test the model
     # model = ResCNN()
     # model = StockS4()
-    model = LSTMRegressor()
-    # model = SimpleTransformer()
-    
+    # model = LSTMRegressor()
+    model = SimpleTransformer()
+
     print(model)
-        
+
     # Test dataset
     dataset = StockDataset(DATA_FILE_DIR, window_size=10)
     train_loader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True)
-    
+
     for batch_idx, (data, target) in enumerate(train_loader):
         print(data.shape)
         print(target.shape)
-        
+
         # Ensure data is in the expected shape [batch_size, sequence_length, num_features]
         data = data.squeeze(1)  # Remove the singleton dimension (1) for the channel
         output = model(data)
-        
+
         print(output.shape)
         break
