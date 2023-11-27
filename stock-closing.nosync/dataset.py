@@ -12,32 +12,6 @@ DATA_FILE_DIR = './data/train_added_features.csv'
 MAX_SECONDS = 55  # Maximum number of seconds * 10 in a window
 
 
-def load_and_clean_data(
-    data_filepath: str,
-    fillna: Literal['zero', 'mean'] = 'mean',
-) -> pd.DataFrame:
-    """
-    Load and clean data from csv file.
-    Args:
-        data_filepath (string): Path to the csv file with stock data.
-        fillna (string): How to fill NaN values. Default: 'mean'.
-    Returns:
-        data (DataFrame): Cleaned data.
-    """
-    # Load data from csv file
-    data = pd.read_csv(data_filepath)
-    if fillna == 'zero':
-        # Replace all NaN values with 0
-        data = data.fillna(0)
-    elif fillna == 'mean':
-        # Replace all NaN values in far_price and near_price with column mean
-        data = data.fillna(data.mean())
-    else:
-        raise ValueError(f"fillna must be 'zero' or 'mean', not {fillna}.")
-
-    return data
-
-
 class StockDataset(torch.utils.data.Dataset):
     """
     Define a dataset for Optiver stock movement prediction.
@@ -49,7 +23,7 @@ class StockDataset(torch.utils.data.Dataset):
             data_filepath (string): Path to the csv file with stock data.
             window_size (int): Size of the window in 10 seconds for the stock data. Default: 10.
         """
-        data = load_and_clean_data(data_filepath)
+        data = pd.read_csv(data_filepath)
         # data = data.drop(columns=DROP_FEATURES) not needed, already removed in added features training csv
         self.data = data.drop(columns=["target"]).to_numpy()
         self.targets = data["target"].to_numpy()
