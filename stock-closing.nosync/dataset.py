@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from typing import Literal
 
-DATA_FILE_DIR = '/notebooks/advanced-perception/stock-closing.nosync/data/train_added_features.csv'
+DATA_FILE_DIR = './data/train_added_features.csv'
 # DROP_FEATURES = [
 #     # 'far_price',
 #     # 'near_price',
@@ -12,50 +12,68 @@ DATA_FILE_DIR = '/notebooks/advanced-perception/stock-closing.nosync/data/train_
 MAX_SECONDS = 55  # Maximum number of seconds * 10 in a window
 
 
-# def load_and_clean_data(
-#     data_filepath: str, fillna: Literal['zero', 'mean'] = 'mean', 
-#     add_features_flag: bool = True) -> pd.DataFrame:
-#     """
-#     Load and clean data from csv file.
-#     Args:
-#         data_filepath (string): Path to the csv file with stock data.
-#         fillna (string): How to fill NaN values. Default: 'mean'.
-#     Returns:
-#         data (DataFrame): Cleaned data.
-#     """
-#     # Load data from csv file
-#     data = pd.read_csv(data_filepath)
-#     # Drop features
-#     data = data.drop(columns=DROP_FEATURES)
-#     if fillna == 'zero':
-#         # Replace all NaN values with 0
-#         data = data.fillna(0)
-#     elif fillna == 'mean':
-#         # Replace all NaN values in far_price and near_price with column mean
-#         data = data.fillna(data.mean())
-#     else:
-#         raise ValueError(f"fillna must be 'zero' or 'mean', not {fillna}.")
-#     if add_features_flag:
-#         data = sizesum_and_pricestd(data)
+def load_and_clean_data(
+    data_filepath: str,
+    fillna: Literal['zero', 'mean'] = 'mean',
+    add_features_flag: bool = True,
+) -> pd.DataFrame:
+    """
+    Load and clean data from csv file.
+    Args:
+        data_filepath (string): Path to the csv file with stock data.
+        fillna (string): How to fill NaN values. Default: 'mean'.
+    Returns:
+        data (DataFrame): Cleaned data.
+    """
+    # Load data from csv file
+    data = pd.read_csv(data_filepath)
+    if fillna == 'zero':
+        # Replace all NaN values with 0
+        data = data.fillna(0)
+    elif fillna == 'mean':
+        # Replace all NaN values in far_price and near_price with column mean
+        data = data.fillna(data.mean())
+    else:
+        raise ValueError(f"fillna must be 'zero' or 'mean', not {fillna}.")
+    if add_features_flag:
+        data = sizesum_and_pricestd(data)
 
-#     return data
+    return data
 
 
-# def sizesum_and_pricestd(df) -> pd.DataFrame:
-#     price_ftrs = ['reference_price', 'far_price', 'near_price', 'bid_price', 'ask_price', 'wap'] # std
-#     size_ftrs = ['imbalance_size', 'matched_size', 'bid_size', 'ask_size'] # sum
+def sizesum_and_pricestd(df) -> pd.DataFrame:
+    price_ftrs = [
+        'reference_price',
+        'far_price',
+        'near_price',
+        'bid_price',
+        'ask_price',
+        'wap',
+    ]  # std
+    size_ftrs = ['imbalance_size', 'matched_size', 'bid_size', 'ask_size']  # sum
 
-#     rolled = df[['stock_id'] + size_ftrs].groupby('stock_id').rolling(window=6, min_periods=1).sum()
-#     rolled = rolled.reset_index(level=0, drop=True)
-#     for col in size_ftrs:
-#         df[f'{col}_rolled_sum'] = rolled[col]
+    rolled = (
+        df[['stock_id'] + size_ftrs]
+        .groupby('stock_id')
+        .rolling(window=6, min_periods=1)
+        .sum()
+    )
+    rolled = rolled.reset_index(level=0, drop=True)
+    for col in size_ftrs:
+        df[f'{col}_rolled_sum'] = rolled[col]
 
-#     rolled = df[['stock_id'] + price_ftrs].groupby('stock_id').rolling(window=6, min_periods=1).std().fillna(0)
-#     rolled = rolled.reset_index(level=0, drop=True)
-#     for col in price_ftrs:
-#         df[f'{col}_rolled_std'] = rolled[col]
+    rolled = (
+        df[['stock_id'] + price_ftrs]
+        .groupby('stock_id')
+        .rolling(window=6, min_periods=1)
+        .std()
+        .fillna(0)
+    )
+    rolled = rolled.reset_index(level=0, drop=True)
+    for col in price_ftrs:
+        df[f'{col}_rolled_std'] = rolled[col]
 
-#     return df
+    return df
 
 
 class StockDataset(torch.utils.data.Dataset):
@@ -69,8 +87,8 @@ class StockDataset(torch.utils.data.Dataset):
             data_filepath (string): Path to the csv file with stock data.
             window_size (int): Size of the window in 10 seconds for the stock data. Default: 10.
         """
-        data = pd.read_csv(data_filepath)
-        #data = data.drop(columns=DROP_FEATURES) not needed, already removed in added features training csv
+        data = load_and_clean_data(data_filepath)
+        # data = data.drop(columns=DROP_FEATURES) not needed, already removed in added features training csv
         self.data = data.drop(columns=["target"]).to_numpy()
         self.targets = data["target"].to_numpy()
         assert window_size > 0, "Window size must be greater than 0."
@@ -109,13 +127,8 @@ if __name__ == '__main__':
     print(len(dataset))
     train_loader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True)
     for batch_idx, (data, target) in enumerate(train_loader):
-        # if (
-        #     data.shape[0] != 64
-        #     or data.shape[1] != 1
-        #     or data.shape[2] != 10
-        #     or data.shape[3] != 14
-        # ):
         print(data.shape)
         print(target.shape)
+        print(target)
         print(batch_idx)
         break

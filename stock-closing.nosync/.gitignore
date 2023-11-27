@@ -1,0 +1,6 @@
+/data/
+/models/
+/checkpoints/
+.vscode/
+/literature/
+/wandb/

@@ -4,11 +4,13 @@ import os
 import numpy as np
 from tqdm import tqdm
 from dataset import StockDataset
-from models import ResCNN, StockS4
+from models import ResCNN, StockS4, LSTMRegressor, SimpleTransformer
 
 model_mapping = {
     'rescnn': ResCNN,
     's4': StockS4,
+    'lstm': LSTMRegressor,
+    'transformer': SimpleTransformer,
 }
 
 TEST_DATA_DIR = Path('./data/train.csv')
@@ -19,10 +21,10 @@ def evaluate(
     net,
     dataloader,
     device,
-    amp,
     batch_size,
     criterion,
     n_val,
+    amp=False,
     save_predictions=False,
 ):
     save_dir = Path(f'predictions_{net.__class__.__name__}')

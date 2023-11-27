@@ -5,6 +5,7 @@ import os
 import logging
 import random
 import numpy as np
+from argparse import ArgumentParser
 from pathlib import Path
 from dataset import StockDataset, DATA_FILE_DIR
 from models import ResCNN, StockS4, LSTMRegressor
@@ -13,6 +14,7 @@ import pytorch_warmup as warmup
 from wandb import Artifact
 from tqdm import tqdm
 from torch.utils.data import DataLoader, random_split
+from typing import Literal
 
 dir_checkpoint = Path('checkpoints')
 log_dir = Path('logs')
@@ -131,6 +133,7 @@ def train(
     )
     # Initialize logging
     experiment = wandb.init(
+        entity='advanced-perception',
         project='optiver',
         resume='allow',
         anonymous='must',
@@ -277,20 +280,18 @@ def train(
                             gc.collect()
 
 
-def main():
-    epochs = 10
-    batch_size = 128
-    lr = 0.001
-    val_percent = 0.2
-    amp = False
-    model_type = 's4'
+def main(
+    epochs=10,
+    batch_size=128,
+    lr=0.001,
+    val_percent=0.2,
+    amp=False,
+    model_type: Literal['s4', 'rescnn', 'lstm', 'transformer'] = 's4',
+):
     optimizer = 's4' if model_type == 's4' else 'adamw'
     optimizer_state_dict = None
     loss_function = 'mae'
     activation = 'relu'
-    # model_type = 'rescnn'
-    # model_type = 's4'
-    model_type = 'LSTM'
 
     seed_all(seed=seed)
 
@@ -318,4 +319,11 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    parser = ArgumentParser()
+    parser.add_argument('--epochs', type=int, default=10)
+    parser.add_argument('--batch_size', type=int, default=1024)
+    parser.add_argument('--lr', type=float, default=0.001)
+    parser.add_argument('--val_percent', type=float, default=0.2)
+    parser.add_argument('--amp', action='store_false')
+    parser.add_argument('--model_type', type=str, default='rescnn')
+    main(**vars(parser.parse_args()))
