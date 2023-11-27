@@ -15,7 +15,6 @@ MAX_SECONDS = 55  # Maximum number of seconds * 10 in a window
 def load_and_clean_data(
     data_filepath: str,
     fillna: Literal['zero', 'mean'] = 'mean',
-    add_features_flag: bool = True,
 ) -> pd.DataFrame:
     """
     Load and clean data from csv file.
@@ -35,45 +34,8 @@ def load_and_clean_data(
         data = data.fillna(data.mean())
     else:
         raise ValueError(f"fillna must be 'zero' or 'mean', not {fillna}.")
-    if add_features_flag:
-        data = sizesum_and_pricestd(data)
 
     return data
-
-
-def sizesum_and_pricestd(df) -> pd.DataFrame:
-    price_ftrs = [
-        'reference_price',
-        'far_price',
-        'near_price',
-        'bid_price',
-        'ask_price',
-        'wap',
-    ]  # std
-    size_ftrs = ['imbalance_size', 'matched_size', 'bid_size', 'ask_size']  # sum
-
-    rolled = (
-        df[['stock_id'] + size_ftrs]
-        .groupby('stock_id')
-        .rolling(window=6, min_periods=1)
-        .sum()
-    )
-    rolled = rolled.reset_index(level=0, drop=True)
-    for col in size_ftrs:
-        df[f'{col}_rolled_sum'] = rolled[col]
-
-    rolled = (
-        df[['stock_id'] + price_ftrs]
-        .groupby('stock_id')
-        .rolling(window=6, min_periods=1)
-        .std()
-        .fillna(0)
-    )
-    rolled = rolled.reset_index(level=0, drop=True)
-    for col in price_ftrs:
-        df[f'{col}_rolled_std'] = rolled[col]
-
-    return df
 
 
 class StockDataset(torch.utils.data.Dataset):
