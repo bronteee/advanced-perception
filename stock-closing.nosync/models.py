@@ -23,7 +23,7 @@ class ResCNN(nn.Module):
         self.layer3 = nn.Sequential(nn.Conv2d(8, 32, kernel_size=1), nn.LeakyReLU(0.3))
         self.layer4 = nn.Sequential(nn.Conv2d(32, 2, kernel_size=1), nn.LeakyReLU(0.3))
         self.pl = nn.AvgPool2d((5, 2))
-        self.fc = nn.Linear(28, 1)
+        self.fc = nn.Linear(248, 1)
         self.tanh = nn.Tanh()
 
     def forward(self, x):
@@ -80,13 +80,13 @@ class StockS4(nn.Module):
         """
         Input x is shape (Batch, Length, d_input)
         """
-        print(x.shape)
+        # print(x.shape)
         x = x.view(
             x.shape[0],
             -1,
             1,  # Reshape to (Batch, Length, d_input=1) for our data set
         )
-        print(x.shape)
+        # print(x.shape)
         x = self.encoder(x)  # (B, L, d_input) -> (B, L, d_model)
 
         x = x.transpose(-1, -2)  # (B, L, d_model) -> (B, d_model, L)
@@ -164,6 +164,8 @@ class SimpleTransformer(nn.Module):
         self.decoder = nn.Linear(d_model, 1)
 
     def forward(self, x):
+        # Reduce the feature dimension
+        x = x.view(x.size(0), -1, x.size(-1))
         x = self.embedding(x)
         x = self.tf1.encoder(x)
         x = self.fc(x[:, -1, :])  # Use the last sequence output
@@ -175,24 +177,31 @@ class SimpleTransformer(nn.Module):
 
 if __name__ == '__main__':
     # Test the model
-    # model = ResCNN()
+    model = ResCNN()
     # model = StockS4()
     # model = LSTMRegressor()
-    model = SimpleTransformer()
+    # model = SimpleTransformer()
 
-    print(model)
+    # Test on random input
+    x = torch.randn(64, 1, 10, 124)
+    output = model(x)
+    print(output.shape)
 
-    # Test dataset
-    dataset = StockDataset(DATA_FILE_DIR, window_size=10)
-    train_loader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True)
+    # # Test dataset
+    # dataset = StockDataset(DATA_FILE_DIR, window_size=10)
+    # train_loader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True)
 
-    for batch_idx, (data, target) in enumerate(train_loader):
-        print(data.shape)
-        print(target.shape)
+    # for batch_idx, (data, target) in enumerate(train_loader):
+    #     print(data.shape)
+    #     print(target.shape)
 
-        # Ensure data is in the expected shape [batch_size, sequence_length, num_features]
-        data = data.squeeze(1)  # Remove the singleton dimension (1) for the channel
-        output = model(data)
+    #     # Ensure data is in the expected shape [batch_size, sequence_length, num_features]
+    #     data = data.squeeze(1)  # Remove the singleton dimension (1) for the channel
+    #     output = model(data)
+    #     print(output)
+    #     # criterion = nn.L1Loss()
+    #     # loss = criterion(output, target)
 
-        print(output.shape)
-        break
+    #     print(output.shape)
+    #     # print(loss)
+    #     break
