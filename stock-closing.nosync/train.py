@@ -245,9 +245,8 @@ def train(
                             model,
                             val_loader,
                             device,
-                            amp,
                             batch_size,
-                            criterion=criterion,
+                            criterion,
                             n_val=len(val_set),
                         )
                         logging.info('Validation Loss: %s', val_loss)
