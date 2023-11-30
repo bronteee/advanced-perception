@@ -7,8 +7,12 @@ import random
 import numpy as np
 from argparse import ArgumentParser
 from pathlib import Path
-from dataset import StockDataset, DATA_FILE_DIR
-from models import ResCNN, StockS4, LSTMRegressor
+from dataset import (
+    StockDataset,
+    DATA_FILE_DIR,
+    TargetTimeSeriesDataset,
+    TARGET_SERIES_DATA_FILE_DIR,
+)
 from evaluate import evaluate, model_mapping
 import pytorch_warmup as warmup
 from wandb import Artifact
@@ -86,7 +90,8 @@ def setup_optimizer(model, lr, weight_decay, epochs):
 def train(
     model,
     device,
-    window_size: int = 10,
+    dataset_type: Literal['full', 'ts'] = 'ts',
+    window_size: int = 55,
     dir_checkpoint: Path = dir_checkpoint,
     starting_epoch: int = 1,
     epochs: int = 5,
@@ -106,7 +111,12 @@ def train(
     warmup_lr_init: float = 5e-7,
 ):
     # Create dataset and dataloader
-    dataset = StockDataset(DATA_FILE_DIR, window_size=window_size)
+    if dataset_type == 'full':
+        dataset = StockDataset(DATA_FILE_DIR, window_size=window_size)
+    elif dataset_type == 'ts':
+        dataset = TargetTimeSeriesDataset(
+            TARGET_SERIES_DATA_FILE_DIR, window_size=window_size
+        )
     total_length = len(dataset)
     n_val = int(val_percent * total_length)
     n_train = total_length - n_val
