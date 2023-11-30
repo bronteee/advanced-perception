@@ -11,9 +11,9 @@ model_mapping = {
     'rescnn_ts': ResCNN(target_series=True),
     's4': StockS4(),
     'lstm': LSTMRegressor(),
-    'lstm_ts': LSTMRegressor(input_size=200),
+    'lstm_ts': LSTMRegressor(input_size=199),
     'transformer': SimpleTransformer(),
-    'transformer_ts': SimpleTransformer(feature_num=200),
+    'transformer_ts': SimpleTransformer(feature_num=199),
 }
 
 TEST_DATA_DIR = Path('./data/train.csv')

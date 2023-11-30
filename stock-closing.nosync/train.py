@@ -11,7 +11,8 @@ from dataset import (
     StockDataset,
     DATA_FILE_DIR,
     TargetTimeSeriesDataset,
-    TARGET_SERIES_DATA_FILE_DIR,
+    TRAIN_TARGET_SERIES_DATA_FILE_DIR,
+    VALIDATION_TARGET_SERIES_DATA_FILE_DIR,
 )
 from evaluate import evaluate, model_mapping
 import pytorch_warmup as warmup
@@ -113,16 +114,19 @@ def train(
     # Create dataset and dataloader
     if dataset_type == 'full':
         dataset = StockDataset(DATA_FILE_DIR, window_size=window_size)
-    elif dataset_type == 'ts':
-        dataset = TargetTimeSeriesDataset(
-            TARGET_SERIES_DATA_FILE_DIR, window_size=window_size
-        )
-    total_length = len(dataset)
-    n_val = int(val_percent * total_length)
-    n_train = total_length - n_val
+        total_length = len(dataset)
+        n_val = int(val_percent * total_length)
+        n_train = total_length - n_val
 
-    # Use the calculated lengths to split the dataset
-    train_set, val_set = random_split(dataset, [n_train, n_val])
+        # Use the calculated lengths to split the dataset
+        train_set, val_set = random_split(dataset, [n_train, n_val])
+    elif dataset_type == 'ts':
+        train_set = TargetTimeSeriesDataset(
+            TRAIN_TARGET_SERIES_DATA_FILE_DIR, window_size=window_size
+        )
+        val_set = TargetTimeSeriesDataset(
+            VALIDATION_TARGET_SERIES_DATA_FILE_DIR, window_size=window_size
+        )
 
     # Print lengths for verification
     print("Total dataset length:", total_length)
