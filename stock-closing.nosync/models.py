@@ -147,9 +147,13 @@ class StockS4(nn.Module):
 
 
 class LSTMRegressor(nn.Module):
-    def __init__(self, input_size=124, hidden_size=64, num_layers=2, output_size=1):
+    def __init__(
+        self, input_size=124, hidden_size=64, num_layers=2, output_size=1, dropout=0.2
+    ):
         super(LSTMRegressor, self).__init__()
-        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
+        self.lstm = nn.LSTM(
+            input_size, hidden_size, num_layers, batch_first=True, dropout=dropout
+        )
         self.fc = nn.Linear(hidden_size, output_size)
 
     def forward(self, x):
@@ -201,9 +205,9 @@ class SimpleTransformer(nn.Module):
 
 if __name__ == '__main__':
     # Test the model
-    # model = ResCNN()
+    model = ResCNN(target_series=True)
     # model = StockS4()
-    model = LSTMRegressor(input_size=200,)
+    # model = LSTMRegressor(input_size=200,)
     # model = SimpleTransformer(feature_num=200)
 
     # Test on random input

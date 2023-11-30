@@ -308,7 +308,7 @@ def main(
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     logging.info(f'Using device {device}')
 
-    model = model_mapping[model_type]()
+    model = model_mapping[model_type]
     model.to(device=device)
     logging.info(f'Model: {model.__class__.__name__}')
 
@@ -331,7 +331,7 @@ def main(
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('--epochs', type=int, default=10)
-    parser.add_argument('--batch_size', type=int, default=1024)
+    parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--val_percent', type=float, default=0.2)
     parser.add_argument('--amp', action='store_false')

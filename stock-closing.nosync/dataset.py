@@ -142,7 +142,7 @@ class TargetTimeSeriesDataset(torch.utils.data.Dataset):
     def __getitem__(self, index):
         return (
             self.series[index : index + self.window_size].unsqueeze(0),
-            self.series[index + self.window_size],
+            self.series[index + self.window_size][-1].unsqueeze(0),
         )
 
 
