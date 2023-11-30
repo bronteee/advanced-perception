@@ -127,6 +127,7 @@ def train(
         val_set = TargetTimeSeriesDataset(
             VALIDATION_TARGET_SERIES_DATA_FILE_DIR, window_size=window_size
         )
+        total_length = len(train_set) + len(val_set)
 
     # Print lengths for verification
     print("Total dataset length:", total_length)
@@ -336,7 +337,7 @@ if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('--epochs', type=int, default=10)
     parser.add_argument('--batch_size', type=int, default=32)
-    parser.add_argument('--lr', type=float, default=0.001)
+    parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--val_percent', type=float, default=0.2)
     parser.add_argument('--amp', action='store_false')
     parser.add_argument('--model_type', type=str, default='rescnn')
