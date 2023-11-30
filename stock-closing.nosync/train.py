@@ -305,6 +305,7 @@ def main(
     train(
         model,
         device,
+        window_size=100,
         epochs=epochs,
         batch_size=batch_size,
         learning_rate=lr,

@@ -7,10 +7,12 @@ from dataset import StockDataset
 from models import ResCNN, StockS4, LSTMRegressor, SimpleTransformer
 
 model_mapping = {
-    'rescnn': ResCNN,
-    's4': StockS4,
-    'lstm': LSTMRegressor,
-    'transformer': SimpleTransformer,
+    'rescnn': ResCNN(target_series=False),
+    'rescnn_ts': ResCNN(target_series=True),
+    's4': StockS4(),
+    'lstm': LSTMRegressor(),
+    'lstm_ts': LSTMRegressor(input_size=200),
+    'transformer': SimpleTransformer(feature_num=200),
 }
 
 TEST_DATA_DIR = Path('./data/train.csv')
@@ -64,11 +66,11 @@ def evaluate(
 
 def main():
     checkpoint_file = 'checkpoint_epoch2_6.473762512207031.pth'
-    model_tyoe = 'rescnn'
+    model_type = 'rescnn'
     criterion = torch.nn.L1Loss()
     # Instantiate the model
     checkpoint_dir = './checkpoints'
-    model = model_mapping[model_tyoe]()
+    model = model_mapping[model_type]
     # Load the model checkpoint
     model_state_dict = torch.load(f'{checkpoint_dir}/{checkpoint_file}')[
         'model_state_dict'

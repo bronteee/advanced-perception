@@ -1,14 +1,11 @@
 import torch
 import pandas as pd
 import numpy as np
+import tensorflow as tf
 from typing import Literal
 
 DATA_FILE_DIR = './data/train_added_features.csv'
-# DROP_FEATURES = [
-#     # 'far_price',
-#     # 'near_price',
-#     # 'row_id'  I alread removed this
-# ]
+TARGET_SERIES_DATA_FILE_DIR = './data/train_target_series.csv'
 MAX_SECONDS = 55  # Maximum number of seconds * 10 in a window
 
 
@@ -121,9 +118,48 @@ class StockDataset(torch.utils.data.Dataset):
         return window, target
 
 
+def windowed_dataset(series, window_size=55, batch_size=32):
+    series = tf.expand_dims(series, axis=-1)
+    ds = tf.data.Dataset.from_tensor_slices(series)
+    ds = ds.window(window_size + 1, shift=1, drop_remainder=True)
+    ds = ds.flat_map(lambda w: w.batch(window_size + 1))
+    ds = ds.map(lambda w: (w[:-1], w[-1]))
+    return ds.batch(batch_size).prefetch(1)
+
+
+class TargetTimeSeriesDataset(torch.utils.data.Dataset):
+    def __init__(self, data_file_path, window_size=55):
+        series = pd.read_csv(data_file_path).to_numpy()
+        self.series = torch.tensor(series, dtype=torch.float32)
+        print(self.series.shape)
+        # make channel the first dimension
+        # self.series = self.series.permute(2, 0, 1)
+        self.window_size = window_size
+
+    def __len__(self):
+        return len(self.series) - self.window_size
+
+    def __getitem__(self, index):
+        return (
+            self.series[index : index + self.window_size].unsqueeze(0),
+            self.series[index + self.window_size],
+        )
+
+
 if __name__ == '__main__':
-    # Test dataset
-    dataset = StockDataset(DATA_FILE_DIR)
+    # # Test dataset
+    # dataset = StockDataset(DATA_FILE_DIR)
+    # print(len(dataset))
+    # train_loader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True)
+    # for batch_idx, (data, target) in enumerate(train_loader):
+    #     print(data.shape)
+    #     print(target.shape)
+    #     print(target)
+    #     print(batch_idx)
+    #     break
+
+    # Test windowed dataset
+    dataset = TargetTimeSeriesDataset(TARGET_SERIES_DATA_FILE_DIR)
     print(len(dataset))
     train_loader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True)
     for batch_idx, (data, target) in enumerate(train_loader):
