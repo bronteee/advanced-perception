@@ -7,14 +7,21 @@ import random
 import numpy as np
 from argparse import ArgumentParser
 from pathlib import Path
-from dataset import StockDataset, DATA_FILE_DIR
-from models import ResCNN, StockS4, LSTMRegressor
+from dataset import (
+    StockDataset,
+    DATA_FILE_DIR,
+    TargetTimeSeriesDataset,
+    TRAIN_TARGET_SERIES_DATA_FILE_DIR,
+    VALIDATION_TARGET_SERIES_DATA_FILE_DIR,
+)
 from evaluate import evaluate, model_mapping
 import pytorch_warmup as warmup
 from wandb import Artifact
 from tqdm import tqdm
 from torch.utils.data import DataLoader, random_split
 from typing import Literal
+from sklearn.preprocessing import StandardScaler
+import pandas as pd
 
 dir_checkpoint = Path('checkpoints')
 log_dir = Path('logs')
@@ -86,7 +93,8 @@ def setup_optimizer(model, lr, weight_decay, epochs):
 def train(
     model,
     device,
-    window_size: int = 10,
+    dataset_type: Literal['full', 'ts'] = 'ts',
+    window_size: int = 55,
     dir_checkpoint: Path = dir_checkpoint,
     starting_epoch: int = 1,
     epochs: int = 5,
@@ -106,13 +114,26 @@ def train(
     warmup_lr_init: float = 5e-7,
 ):
     # Create dataset and dataloader
-    dataset = StockDataset(DATA_FILE_DIR, window_size=window_size)
-    total_length = len(dataset)
-    n_val = int(val_percent * total_length)
-    n_train = total_length - n_val
+    if dataset_type == 'full':
+        dataset = StockDataset(DATA_FILE_DIR, window_size=window_size)
+        total_length = len(dataset)
+        n_val = int(val_percent * total_length)
+        n_train = total_length - n_val
 
-    # Use the calculated lengths to split the dataset
-    train_set, val_set = random_split(dataset, [n_train, n_val])
+        # Use the calculated lengths to split the dataset
+        train_set, val_set = random_split(dataset, [n_train, n_val])
+    elif dataset_type == 'ts':
+        scaler = StandardScaler()
+        scaler.fit(pd.read_csv(TRAIN_TARGET_SERIES_DATA_FILE_DIR).to_numpy())
+        train_set = TargetTimeSeriesDataset(
+            TRAIN_TARGET_SERIES_DATA_FILE_DIR, window_size=window_size, scaler=scaler
+        )
+        val_set = TargetTimeSeriesDataset(
+            VALIDATION_TARGET_SERIES_DATA_FILE_DIR,
+            window_size=window_size,
+            scaler=scaler,
+        )
+        total_length = len(train_set) + len(val_set)
 
     # Print lengths for verification
     print("Total dataset length:", total_length)
@@ -247,6 +268,8 @@ def train(
                             device,
                             batch_size,
                             criterion,
+                            scaler=scaler,
+                            dataset_type=dataset_type,
                             n_val=len(val_set),
                         )
                         logging.info('Validation Loss: %s', val_loss)
@@ -254,7 +277,9 @@ def train(
                             {'val loss': val_loss, 'step': global_step, 'epoch': epoch}
                         )
                         if save_checkpoint:
-                            Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
+                            Path(
+                                dir_checkpoint, model.__class__.__name__, dataset_type
+                            ).mkdir(parents=True, exist_ok=True)
                             state_dict = model.state_dict()
                             torch.save(
                                 {
@@ -271,7 +296,7 @@ def train(
                                     metadata=dict(
                                         model_type=model.__class__.__name__,
                                         starting_epoch=epoch + starting_epoch,
-                                        val_loss=val_loss.float(),
+                                        val_loss=val_loss,
                                     ),
                                 )
                             )
@@ -298,13 +323,14 @@ def main(
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     logging.info(f'Using device {device}')
 
-    model = model_mapping[model_type]()
+    model = model_mapping[model_type]
     model.to(device=device)
     logging.info(f'Model: {model.__class__.__name__}')
 
     train(
         model,
         device,
+        window_size=100,
         epochs=epochs,
         batch_size=batch_size,
         learning_rate=lr,
@@ -319,10 +345,10 @@ def main(
 
 if __name__ == '__main__':
     parser = ArgumentParser()
-    parser.add_argument('--epochs', type=int, default=10)
-    parser.add_argument('--batch_size', type=int, default=1024)
-    parser.add_argument('--lr', type=float, default=0.001)
+    parser.add_argument('--epochs', type=int, default=100)
+    parser.add_argument('--batch_size', type=int, default=32)
+    parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--val_percent', type=float, default=0.2)
     parser.add_argument('--amp', action='store_false')
-    parser.add_argument('--model_type', type=str, default='rescnn')
+    parser.add_argument('--model_type', type=str, default='lstm_ts')
     main(**vars(parser.parse_args()))

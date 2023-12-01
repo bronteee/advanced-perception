@@ -12,19 +12,42 @@ class ResCNN(nn.Module):
     This is mostly based on https://github.com/hardyqr/CNN-for-Stock-Market-Prediction-PyTorch/blob/master/source/cnn.py
     """
 
-    def __init__(self):
+    def __init__(self, target_series=True):
         super(ResCNN, self).__init__()
-        self.layer1 = nn.Sequential(
-            nn.Conv2d(1, 16, kernel_size=3, padding=1), nn.LeakyReLU(0.3)
-        )
-        self.layer2 = nn.Sequential(
-            nn.Conv2d(16, 8, kernel_size=3, padding=1), nn.LeakyReLU(0.3)
-        )
-        self.layer3 = nn.Sequential(nn.Conv2d(8, 32, kernel_size=1), nn.LeakyReLU(0.3))
-        self.layer4 = nn.Sequential(nn.Conv2d(32, 2, kernel_size=1), nn.LeakyReLU(0.3))
-        self.pl = nn.AvgPool2d((5, 2))
-        self.fc = nn.Linear(248, 1)
-        self.tanh = nn.Tanh()
+        if target_series is True:
+            self.layer1 = nn.Sequential(
+                nn.Conv2d(1, 16, kernel_size=3, padding=1), nn.LeakyReLU(0.3)
+            )
+            self.layer2 = nn.Sequential(
+                nn.Conv2d(16, 8, kernel_size=3, padding=1), nn.LeakyReLU(0.3)
+            )
+            self.layer3 = nn.Sequential(
+                nn.Conv2d(8, 32, kernel_size=1), nn.LeakyReLU(0.3)
+            )
+            self.layer4 = nn.Sequential(
+                nn.Conv2d(32, 2, kernel_size=1), nn.LeakyReLU(0.3)
+            )
+            self.pl = nn.AvgPool2d((5, 2))
+            self.fc1 = nn.Linear(2200, 1100)
+            self.fc2 = nn.Linear(1100, 200)
+            self.tanh = nn.Tanh()
+        else:
+            self.layer1 = nn.Sequential(
+                nn.Conv2d(1, 16, kernel_size=3, padding=1), nn.LeakyReLU(0.3)
+            )
+            self.layer2 = nn.Sequential(
+                nn.Conv2d(16, 8, kernel_size=3, padding=1), nn.LeakyReLU(0.3)
+            )
+            self.layer3 = nn.Sequential(
+                nn.Conv2d(8, 32, kernel_size=1), nn.LeakyReLU(0.3)
+            )
+            self.layer4 = nn.Sequential(
+                nn.Conv2d(32, 2, kernel_size=1), nn.LeakyReLU(0.3)
+            )
+            self.pl = nn.AvgPool2d((5, 2))
+            self.fc1 = nn.Linear(1364, 682)
+            self.fc2 = nn.Linear(682, 1)
+            self.tanh = nn.Tanh()
 
     def forward(self, x):
         # print(x.size())
@@ -38,16 +61,17 @@ class ResCNN(nn.Module):
         # print(out.size())
         out = out.view(out.size(0), -1)
         # print(out.size())
-        out = self.fc(out)
+        out = self.fc1(out)
+        out = self.fc2(out)
         out = self.tanh(out)  # TODO: Do we need this?
         return out
 
-
+# Maybe we use less stocks
 class StockS4(nn.Module):
     def __init__(
         self,
         d_input=1,  # Number of channels, 1 for this dataset
-        d_output=1,  # Number of outputs, 1 for this dataset
+        d_output=200,  # Number of outputs, 1 for this dataset
         d_model=256,
         n_layers=4,
         dropout=0.2,
@@ -123,9 +147,13 @@ class StockS4(nn.Module):
 
 
 class LSTMRegressor(nn.Module):
-    def __init__(self, input_size=124, hidden_size=64, num_layers=2, output_size=1):
+    def __init__(
+        self, input_size=124, hidden_size=64, num_layers=2, output_size=1, dropout=0.2
+    ):
         super(LSTMRegressor, self).__init__()
-        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
+        self.lstm = nn.LSTM(
+            input_size, hidden_size, num_layers, batch_first=True, dropout=dropout
+        )
         self.fc = nn.Linear(hidden_size, output_size)
 
     def forward(self, x):
@@ -144,7 +172,7 @@ class LSTMRegressor(nn.Module):
 
 
 class SimpleTransformer(nn.Module):
-    def __init__(self, feature_num=124, d_model=64, nhead=8, num_layers=1):
+    def __init__(self, feature_num=124, d_model=96, nhead=8, num_layers=1):
         super(SimpleTransformer, self).__init__()
         self.embedding = nn.Linear(feature_num, d_model)
         self.tf1 = nn.Transformer(
@@ -161,7 +189,7 @@ class SimpleTransformer(nn.Module):
             num_encoder_layers=num_layers,
             batch_first=True,
         )
-        self.decoder = nn.Linear(d_model, 1)
+        self.decoder = nn.Linear(d_model, 200)
 
     def forward(self, x):
         # Reduce the feature dimension
@@ -177,31 +205,12 @@ class SimpleTransformer(nn.Module):
 
 if __name__ == '__main__':
     # Test the model
-    model = ResCNN()
+    # model = ResCNN(target_series=True)
     # model = StockS4()
-    # model = LSTMRegressor()
-    # model = SimpleTransformer()
+    # model = LSTMRegressor(input_size=200, output_size=200)
+    model = SimpleTransformer(feature_num=200)
 
     # Test on random input
-    x = torch.randn(64, 1, 10, 124)
+    x = torch.randn(64, 1, 55, 200)
     output = model(x)
     print(output.shape)
-
-    # # Test dataset
-    # dataset = StockDataset(DATA_FILE_DIR, window_size=10)
-    # train_loader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True)
-
-    # for batch_idx, (data, target) in enumerate(train_loader):
-    #     print(data.shape)
-    #     print(target.shape)
-
-    #     # Ensure data is in the expected shape [batch_size, sequence_length, num_features]
-    #     data = data.squeeze(1)  # Remove the singleton dimension (1) for the channel
-    #     output = model(data)
-    #     print(output)
-    #     # criterion = nn.L1Loss()
-    #     # loss = criterion(output, target)
-
-    #     print(output.shape)
-    #     # print(loss)
-    #     break
