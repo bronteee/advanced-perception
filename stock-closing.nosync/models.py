@@ -172,7 +172,7 @@ class LSTMRegressor(nn.Module):
 
 
 class SimpleTransformer(nn.Module):
-    def __init__(self, feature_num=124, d_model=64, nhead=8, num_layers=1):
+    def __init__(self, feature_num=124, d_model=96, nhead=8, num_layers=1):
         super(SimpleTransformer, self).__init__()
         self.embedding = nn.Linear(feature_num, d_model)
         self.tf1 = nn.Transformer(
@@ -189,7 +189,7 @@ class SimpleTransformer(nn.Module):
             num_encoder_layers=num_layers,
             batch_first=True,
         )
-        self.decoder = nn.Linear(d_model, 1)
+        self.decoder = nn.Linear(d_model, 200)
 
     def forward(self, x):
         # Reduce the feature dimension

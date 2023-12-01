@@ -13,7 +13,7 @@ model_mapping = {
     'lstm': LSTMRegressor(),
     'lstm_ts': LSTMRegressor(input_size=200, output_size=200),
     'transformer': SimpleTransformer(),
-    'transformer_ts': SimpleTransformer(feature_num=199),
+    'transformer_ts': SimpleTransformer(feature_num=200),
 }
 
 TEST_DATA_DIR = Path('./data/train.csv')
