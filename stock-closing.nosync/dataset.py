@@ -144,8 +144,8 @@ class TargetTimeSeriesDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, index):
         return (
-            self.series[index : index + self.window_size][:, :-1].unsqueeze(0),
-            self.series[index + self.window_size][-1].unsqueeze(0),
+            self.series[index : index + self.window_size],
+            self.series[index + self.window_size],
         )
 
 
@@ -162,7 +162,9 @@ if __name__ == '__main__':
     #     break
 
     # Test windowed dataset
-    dataset = TargetTimeSeriesDataset(TRAIN_TARGET_SERIES_DATA_FILE_DIR)
+    scaler = StandardScaler()
+    scaler.fit(pd.read_csv(TRAIN_TARGET_SERIES_DATA_FILE_DIR).to_numpy())
+    dataset = TargetTimeSeriesDataset(TRAIN_TARGET_SERIES_DATA_FILE_DIR, scaler=scaler)
     print(len(dataset))
     train_loader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True)
     for batch_idx, (data, target) in enumerate(train_loader):
@@ -170,12 +172,4 @@ if __name__ == '__main__':
         print(target.shape)
         print(target)
         print(batch_idx)
-        # Make sure the target is not always in the input data
-        count = 0
-        for i, sample in enumerate(data):
-            if target[i] in sample:
-                print(f'{target[i]} is in {sample}')
-                print(f'Index: {i}')
-                count += 1
-        print(f'Count: {count}')
         break

@@ -11,7 +11,7 @@ model_mapping = {
     'rescnn_ts': ResCNN(target_series=True),
     's4': StockS4(),
     'lstm': LSTMRegressor(),
-    'lstm_ts': LSTMRegressor(input_size=199),
+    'lstm_ts': LSTMRegressor(input_size=200, output_size=200),
     'transformer': SimpleTransformer(),
     'transformer_ts': SimpleTransformer(feature_num=199),
 }
@@ -54,8 +54,10 @@ def evaluate(
             target = target.to(device=device)
             pred = net(features)
             if dataset_type == 'ts':
-                pred = scaler.inverse_transform(pred)
-                target = scaler.inverse_transform(target)
+                pred = scaler.inverse_transform(pred.cpu())
+                target = scaler.inverse_transform(target.cpu())
+                pred = torch.from_numpy(pred).to(device)
+                target = torch.from_numpy(target).to(device)
             # compute the loss
             val_loss += criterion(
                 pred,

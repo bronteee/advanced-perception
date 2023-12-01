@@ -277,7 +277,9 @@ def train(
                             {'val loss': val_loss, 'step': global_step, 'epoch': epoch}
                         )
                         if save_checkpoint:
-                            Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
+                            Path(
+                                dir_checkpoint, model.__class__.__name__, dataset_type
+                            ).mkdir(parents=True, exist_ok=True)
                             state_dict = model.state_dict()
                             torch.save(
                                 {
@@ -294,7 +296,7 @@ def train(
                                     metadata=dict(
                                         model_type=model.__class__.__name__,
                                         starting_epoch=epoch + starting_epoch,
-                                        val_loss=val_loss.float(),
+                                        val_loss=val_loss,
                                     ),
                                 )
                             )

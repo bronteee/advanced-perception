@@ -29,7 +29,7 @@ class ResCNN(nn.Module):
             )
             self.pl = nn.AvgPool2d((5, 2))
             self.fc1 = nn.Linear(2200, 1100)
-            self.fc2 = nn.Linear(1100, 1)
+            self.fc2 = nn.Linear(1100, 200)
             self.tanh = nn.Tanh()
         else:
             self.layer1 = nn.Sequential(
@@ -66,12 +66,12 @@ class ResCNN(nn.Module):
         out = self.tanh(out)  # TODO: Do we need this?
         return out
 
-
+# Maybe we use less stocks
 class StockS4(nn.Module):
     def __init__(
         self,
         d_input=1,  # Number of channels, 1 for this dataset
-        d_output=1,  # Number of outputs, 1 for this dataset
+        d_output=200,  # Number of outputs, 1 for this dataset
         d_model=256,
         n_layers=4,
         dropout=0.2,
@@ -205,10 +205,10 @@ class SimpleTransformer(nn.Module):
 
 if __name__ == '__main__':
     # Test the model
-    model = ResCNN(target_series=True)
+    # model = ResCNN(target_series=True)
     # model = StockS4()
-    # model = LSTMRegressor(input_size=200,)
-    # model = SimpleTransformer(feature_num=200)
+    # model = LSTMRegressor(input_size=200, output_size=200)
+    model = SimpleTransformer(feature_num=200)
 
     # Test on random input
     x = torch.randn(64, 1, 55, 200)
