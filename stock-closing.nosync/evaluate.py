@@ -27,6 +27,8 @@ def evaluate(
     batch_size,
     criterion,
     n_val,
+    scaler,
+    dataset_type='ts',
     amp=False,
     save_predictions=False,
 ):
@@ -51,15 +53,14 @@ def evaluate(
             features = features.to(device=device)
             target = target.to(device=device)
             pred = net(features)
-
+            if dataset_type == 'ts':
+                pred = scaler.inverse_transform(pred)
+                target = scaler.inverse_transform(target)
             # compute the loss
             val_loss += criterion(
                 pred,
                 target,
-            )
-            # TODO
-            # if save_predictions:
-            # Save predictions as np
+            ).item()
 
     net.train()
     return val_loss / max(num_val_batches, 1)

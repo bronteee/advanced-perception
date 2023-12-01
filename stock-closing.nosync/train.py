@@ -20,6 +20,8 @@ from wandb import Artifact
 from tqdm import tqdm
 from torch.utils.data import DataLoader, random_split
 from typing import Literal
+from sklearn.preprocessing import StandardScaler
+import pandas as pd
 
 dir_checkpoint = Path('checkpoints')
 log_dir = Path('logs')
@@ -121,11 +123,15 @@ def train(
         # Use the calculated lengths to split the dataset
         train_set, val_set = random_split(dataset, [n_train, n_val])
     elif dataset_type == 'ts':
+        scaler = StandardScaler()
+        scaler.fit(pd.read_csv(TRAIN_TARGET_SERIES_DATA_FILE_DIR).to_numpy())
         train_set = TargetTimeSeriesDataset(
-            TRAIN_TARGET_SERIES_DATA_FILE_DIR, window_size=window_size
+            TRAIN_TARGET_SERIES_DATA_FILE_DIR, window_size=window_size, scaler=scaler
         )
         val_set = TargetTimeSeriesDataset(
-            VALIDATION_TARGET_SERIES_DATA_FILE_DIR, window_size=window_size
+            VALIDATION_TARGET_SERIES_DATA_FILE_DIR,
+            window_size=window_size,
+            scaler=scaler,
         )
         total_length = len(train_set) + len(val_set)
 
@@ -262,6 +268,8 @@ def train(
                             device,
                             batch_size,
                             criterion,
+                            scaler=scaler,
+                            dataset_type=dataset_type,
                             n_val=len(val_set),
                         )
                         logging.info('Validation Loss: %s', val_loss)
@@ -335,10 +343,10 @@ def main(
 
 if __name__ == '__main__':
     parser = ArgumentParser()
-    parser.add_argument('--epochs', type=int, default=10)
+    parser.add_argument('--epochs', type=int, default=100)
     parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--val_percent', type=float, default=0.2)
     parser.add_argument('--amp', action='store_false')
-    parser.add_argument('--model_type', type=str, default='rescnn')
+    parser.add_argument('--model_type', type=str, default='lstm_ts')
     main(**vars(parser.parse_args()))

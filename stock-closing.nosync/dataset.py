@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import tensorflow as tf
 from typing import Literal
+from sklearn.preprocessing import StandardScaler
 
 DATA_FILE_DIR = './data/train_added_features.csv'
 TRAIN_TARGET_SERIES_DATA_FILE_DIR = './data/train_target_series.csv'
@@ -129,8 +130,9 @@ def windowed_dataset(series, window_size=55, batch_size=32):
 
 
 class TargetTimeSeriesDataset(torch.utils.data.Dataset):
-    def __init__(self, data_file_path, window_size=55):
+    def __init__(self, data_file_path, scaler, window_size=55):
         series = pd.read_csv(data_file_path).to_numpy()
+        series = scaler.transform(series)
         self.series = torch.tensor(series, dtype=torch.float32)
         print(self.series.shape)
         # make channel the first dimension
@@ -142,7 +144,7 @@ class TargetTimeSeriesDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, index):
         return (
-            self.series[index : index + self.window_size][:,:-1].unsqueeze(0),
+            self.series[index : index + self.window_size][:, :-1].unsqueeze(0),
             self.series[index + self.window_size][-1].unsqueeze(0),
         )
 
