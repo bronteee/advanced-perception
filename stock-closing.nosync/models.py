@@ -66,8 +66,10 @@ class ResCNN(nn.Module):
         out = self.tanh(out)  # TODO: Do we need this?
         return out
 
-# Maybe we use less stocks
 class StockS4(nn.Module):
+    """
+    We did not use this model due to added complexity
+    """
     def __init__(
         self,
         d_input=1,  # Number of channels, 1 for this dataset
@@ -147,6 +149,20 @@ class StockS4(nn.Module):
 
 
 class LSTMRegressor(nn.Module):
+    """
+    LSTMRegressor: PyTorch LSTM-based Neural Network for Regression Tasks
+    
+    Parameters:
+    - input_size: Number of features in the input.
+    - hidden_size: Number of features in the hidden state.
+    - num_layers: Number of recurrent layers.
+    - output_size: Number of output features.
+    - dropout: Dropout probability for the LSTM layer.
+    
+    Attributes:
+    - lstm: Long Short-Term Memory (LSTM) layer for sequence processing.
+    - fc: Fully connected layer for output prediction.
+    """
     def __init__(
         self, input_size=124, hidden_size=64, num_layers=2, output_size=1, dropout=0.2
     ):
@@ -172,6 +188,23 @@ class LSTMRegressor(nn.Module):
 
 
 class SimpleTransformer(nn.Module):
+    """
+    SimpleTransformer: PyTorch Transformer-based Neural Network for Sequence-to-Sequence Tasks
+    
+    Parameters:
+    - feature_num: Number of input features.
+    - d_model: Dimensionality of the model's hidden states.
+    - nhead: Number of heads in the multiheadattention models.
+    - num_layers: Number of sub-encoder-layers in the Transformer.
+    
+    Attributes:
+    - embedding: Linear layer for feature dimension reduction.
+    - tf1: First Transformer layer for encoding.
+    - fc: Fully connected layer with dropout for additional feature processing.
+    - dropout: Dropout layer to prevent overfitting.
+    - tf2: Second Transformer layer for encoding.
+    - decoder: Linear layer for output prediction.
+    """
     def __init__(self, feature_num=124, d_model=96, nhead=8, num_layers=1):
         super(SimpleTransformer, self).__init__()
         self.embedding = nn.Linear(feature_num, d_model)
