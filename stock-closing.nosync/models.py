@@ -205,7 +205,7 @@ class SimpleTransformer(nn.Module):
     - tf2: Second Transformer layer for encoding.
     - decoder: Linear layer for output prediction.
     """
-    def __init__(self, feature_num=124, d_model=96, nhead=8, num_layers=1):
+    def __init__(self, feature_num=124, d_model=96, nhead=4, num_layers=1):
         super(SimpleTransformer, self).__init__()
         self.embedding = nn.Linear(feature_num, d_model)
         self.tf1 = nn.Transformer(
@@ -236,12 +236,143 @@ class SimpleTransformer(nn.Module):
         return x
 
 
+class TimeSeriesTransformer(nn.Module):
+    """
+    TimeSeriesTransformer: PyTorch Transformer-based Neural Network for Time Series Forecasting.  This did not work well
+    
+    Parameters:
+    - feature_num: Number of input features.
+    - d_model: Dimensionality of the model's hidden states.
+    - nhead: Number of heads in the multiheadattention models.
+    - num_layers: Number of sub-encoder-layers in the Transformer.
+    - dropout_rate: Dropout rate for regularization.
+    
+    Attributes:
+    - embedding: Linear layer for feature dimension reduction.
+    - transformer1: First Transformer layer for encoding temporal patterns.
+    - attention_pooling: Attention pooling layer to capture relevant temporal information.
+    - fc: Fully connected layer with dropout for additional feature processing.
+    - transformer2: Second Transformer layer for encoding temporal dependencies.
+    - decoder: Linear layer for output prediction.
+    """
+    def __init__(self, feature_num=200, d_model=96, nhead=8, num_layers=1, dropout_rate=0.5):
+        super(TimeSeriesTransformer, self).__init__()
+
+        # Input feature dimension reduction
+        self.embedding = nn.Linear(feature_num, d_model)
+
+        # First Transformer layer for encoding temporal patterns
+        self.transformer1 = nn.Transformer(
+            d_model=d_model,
+            nhead=nhead,
+            num_encoder_layers=num_layers,
+            batch_first=True,
+        )
+
+        # Attention pooling to capture relevant temporal information
+        self.attention_pooling = nn.MultiheadAttention(d_model, nhead)
+
+        # Fully connected layer with dropout
+        self.fc = nn.Linear(d_model, d_model)
+        self.dropout = nn.Dropout(dropout_rate)
+
+        # Second Transformer layer for encoding temporal dependencies
+        self.transformer2 = nn.Transformer(
+            d_model=d_model,
+            nhead=nhead,
+            num_encoder_layers=num_layers,
+            batch_first=True,
+        )
+
+        # Output prediction layer
+        self.decoder = nn.Linear(d_model, 200)  
+
+    def forward(self, x):
+        # Reduce the feature dimension
+        x = x.view(x.size(0), -1, x.size(-1))
+        x = self.embedding(x)
+
+        # First Transformer layer for encoding temporal patterns
+        x = self.transformer1.encoder(x)
+
+        # Attention pooling to capture relevant temporal information
+        x, _ = self.attention_pooling(x, x, x)
+
+        # Fully connected layer with dropout
+        x = self.fc(x[:, -1, :])  # Use the last sequence output
+        x = self.dropout(x)
+
+        # Second Transformer layer for encoding temporal dependencies
+        x = self.transformer2.encoder(x)
+
+        # Output prediction
+        x = self.decoder(x).squeeze(dim=-1)  # Adjust for regression
+        return x
+
+
+class ThreeLayerTransformer(nn.Module):
+    """
+    ThreeLayerTransformer: PyTorch Transformer-based Neural Network for Sequence-to-Sequence Tasks
+    
+    Parameters:
+    - feature_num: Number of input features.
+    - d_model: Dimensionality of the model's hidden states.
+    - nhead: Number of heads in the multiheadattention models.
+    - num_layers: Number of sub-encoder-layers in the Transformer.
+    
+    Attributes:
+    - embedding: Linear layer for feature dimension reduction.
+    - tf1: First Transformer layer for encoding.
+    - fc: Fully connected layer with dropout for additional feature processing.
+    - dropout: Dropout layer to prevent overfitting.
+    - tf2: Second Transformer layer for encoding.
+    - decoder: Linear layer for output prediction.
+    """
+    def __init__(self, feature_num=124, d_model=96, nhead=8, num_layers=1):
+        super(ThreeLayerTransformer, self).__init__()
+        self.embedding = nn.Linear(feature_num, d_model)
+        self.tf1 = nn.Transformer(
+            d_model=d_model,
+            nhead=nhead,
+            num_encoder_layers=num_layers,
+            batch_first=True,
+        )
+        self.fc = nn.Linear(d_model, d_model)
+        self.dropout = nn.Dropout(0.5)
+        # Second Transformer layer
+        self.tf2 = nn.Transformer(
+            d_model=d_model,
+            nhead=nhead,
+            num_encoder_layers=num_layers,
+            batch_first=True,
+        )
+        # Third Transformer layer
+        self.transformer3 = nn.Transformer(
+            d_model=d_model,
+            nhead=nhead,
+            num_encoder_layers=num_layers,
+            batch_first=True,
+        )
+        self.decoder = nn.Linear(d_model, 200)
+
+    def forward(self, x):
+        # Reduce the feature dimension
+        x = x.view(x.size(0), -1, x.size(-1))
+        x = self.embedding(x)
+        x = self.tf1.encoder(x)
+        x = self.fc(x[:, -1, :])  # Use the last sequence output
+        x = self.dropout(x)
+        x = self.tf2.encoder(x)
+        x = self.decoder(x)
+        return x
+
 if __name__ == '__main__':
     # Test the model
     # model = ResCNN(target_series=True)
     # model = StockS4()
     # model = LSTMRegressor(input_size=200, output_size=200)
-    model = SimpleTransformer(feature_num=200)
+    # model = SimpleTransformer(feature_num=200)
+    model = TimeSeriesTransformer(feature_num=200)
 
     # Test on random input
     x = torch.randn(64, 1, 55, 200)
