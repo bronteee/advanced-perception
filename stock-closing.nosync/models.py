@@ -66,10 +66,12 @@ class ResCNN(nn.Module):
         out = self.tanh(out)  # TODO: Do we need this?
         return out
 
+
 class StockS4(nn.Module):
     """
     We did not use this model due to added complexity
     """
+
     def __init__(
         self,
         d_input=1,  # Number of channels, 1 for this dataset
@@ -151,18 +153,19 @@ class StockS4(nn.Module):
 class LSTMRegressor(nn.Module):
     """
     LSTMRegressor: PyTorch LSTM-based Neural Network for Regression Tasks
-    
+
     Parameters:
     - input_size: Number of features in the input.
     - hidden_size: Number of features in the hidden state.
     - num_layers: Number of recurrent layers.
     - output_size: Number of output features.
     - dropout: Dropout probability for the LSTM layer.
-    
+
     Attributes:
     - lstm: Long Short-Term Memory (LSTM) layer for sequence processing.
     - fc: Fully connected layer for output prediction.
     """
+
     def __init__(
         self, input_size=124, hidden_size=64, num_layers=2, output_size=1, dropout=0.2
     ):
@@ -190,13 +193,13 @@ class LSTMRegressor(nn.Module):
 class SimpleTransformer(nn.Module):
     """
     SimpleTransformer: PyTorch Transformer-based Neural Network for Sequence-to-Sequence Tasks
-    
+
     Parameters:
     - feature_num: Number of input features.
     - d_model: Dimensionality of the model's hidden states.
     - nhead: Number of heads in the multiheadattention models.
     - num_layers: Number of sub-encoder-layers in the Transformer.
-    
+
     Attributes:
     - embedding: Linear layer for feature dimension reduction.
     - tf1: First Transformer layer for encoding.
@@ -205,7 +208,10 @@ class SimpleTransformer(nn.Module):
     - tf2: Second Transformer layer for encoding.
     - decoder: Linear layer for output prediction.
     """
-    def __init__(self, feature_num=124, d_model=96, nhead=4, num_layers=1):
+
+    def __init__(
+        self, feature_num=124, d_model=96, nhead=4, num_layers=1, dropout_rate=0.25
+    ):
         super(SimpleTransformer, self).__init__()
         self.embedding = nn.Linear(feature_num, d_model)
         self.tf1 = nn.Transformer(
@@ -215,7 +221,7 @@ class SimpleTransformer(nn.Module):
             batch_first=True,
         )
         self.fc = nn.Linear(d_model, d_model)
-        self.dropout = nn.Dropout(0.5)
+        self.dropout = nn.Dropout(dropout_rate)
         self.tf2 = nn.Transformer(
             d_model=d_model,
             nhead=nhead,
@@ -239,14 +245,14 @@ class SimpleTransformer(nn.Module):
 class TimeSeriesTransformer(nn.Module):
     """
     TimeSeriesTransformer: PyTorch Transformer-based Neural Network for Time Series Forecasting.  This did not work well
-    
+
     Parameters:
     - feature_num: Number of input features.
     - d_model: Dimensionality of the model's hidden states.
     - nhead: Number of heads in the multiheadattention models.
     - num_layers: Number of sub-encoder-layers in the Transformer.
     - dropout_rate: Dropout rate for regularization.
-    
+
     Attributes:
     - embedding: Linear layer for feature dimension reduction.
     - transformer1: First Transformer layer for encoding temporal patterns.
@@ -255,7 +261,10 @@ class TimeSeriesTransformer(nn.Module):
     - transformer2: Second Transformer layer for encoding temporal dependencies.
     - decoder: Linear layer for output prediction.
     """
-    def __init__(self, feature_num=200, d_model=96, nhead=8, num_layers=1, dropout_rate=0.5):
+
+    def __init__(
+        self, feature_num=200, d_model=96, nhead=8, num_layers=1, dropout_rate=0.25
+    ):
         super(TimeSeriesTransformer, self).__init__()
 
         # Input feature dimension reduction
@@ -285,7 +294,7 @@ class TimeSeriesTransformer(nn.Module):
         )
 
         # Output prediction layer
-        self.decoder = nn.Linear(d_model, 200)  
+        self.decoder = nn.Linear(d_model, 200)
 
     def forward(self, x):
         # Reduce the feature dimension
@@ -313,13 +322,13 @@ class TimeSeriesTransformer(nn.Module):
 class ThreeLayerTransformer(nn.Module):
     """
     ThreeLayerTransformer: PyTorch Transformer-based Neural Network for Sequence-to-Sequence Tasks
-    
+
     Parameters:
     - feature_num: Number of input features.
     - d_model: Dimensionality of the model's hidden states.
     - nhead: Number of heads in the multiheadattention models.
     - num_layers: Number of sub-encoder-layers in the Transformer.
-    
+
     Attributes:
     - embedding: Linear layer for feature dimension reduction.
     - tf1: First Transformer layer for encoding.
@@ -328,7 +337,10 @@ class ThreeLayerTransformer(nn.Module):
     - tf2: Second Transformer layer for encoding.
     - decoder: Linear layer for output prediction.
     """
-    def __init__(self, feature_num=124, d_model=96, nhead=8, num_layers=1):
+
+    def __init__(
+        self, feature_num=124, d_model=96, nhead=8, num_layers=1, dropout_rate=0.25
+    ):
         super(ThreeLayerTransformer, self).__init__()
         self.embedding = nn.Linear(feature_num, d_model)
         self.tf1 = nn.Transformer(
@@ -338,7 +350,7 @@ class ThreeLayerTransformer(nn.Module):
             batch_first=True,
         )
         self.fc = nn.Linear(d_model, d_model)
-        self.dropout = nn.Dropout(0.5)
+        self.dropout = nn.Dropout(dropout_rate)
         # Second Transformer layer
         self.tf2 = nn.Transformer(
             d_model=d_model,
@@ -365,6 +377,7 @@ class ThreeLayerTransformer(nn.Module):
         x = self.tf2.encoder(x)
         x = self.decoder(x)
         return x
+
 
 if __name__ == '__main__':
     # Test the model

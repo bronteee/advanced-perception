@@ -4,7 +4,14 @@ import os
 import numpy as np
 from tqdm import tqdm
 from dataset import StockDataset
-from models import ResCNN, StockS4, LSTMRegressor, SimpleTransformer, TimeSeriesTransformer, ThreeLayerTransformer
+from models import (
+    ResCNN,
+    StockS4,
+    LSTMRegressor,
+    SimpleTransformer,
+    TimeSeriesTransformer,
+    ThreeLayerTransformer,
+)
 
 model_mapping = {
     'rescnn': ResCNN(target_series=False),
@@ -13,9 +20,9 @@ model_mapping = {
     'lstm': LSTMRegressor(),
     'lstm_ts': LSTMRegressor(input_size=200, output_size=200),
     'transformer': SimpleTransformer(),
-    'transformer_ts': SimpleTransformer(feature_num=200),
-    'transformer_improved': TimeSeriesTransformer(feature_num=200),
-    'ThreeLayerTransformer': ThreeLayerTransformer(feature_num=200)
+    'transformer_ts': SimpleTransformer(feature_num=200, dropout_rate=0.25),
+    'transformer_improved': TimeSeriesTransformer(feature_num=200, dropout_rate=0.25),
+    'ThreeLayerTransformer': ThreeLayerTransformer(feature_num=200, dropout_rate=0.25),
 }
 
 TEST_DATA_DIR = Path('./data/train.csv')
