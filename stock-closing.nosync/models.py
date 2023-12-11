@@ -164,7 +164,7 @@ class LSTMRegressor(nn.Module):
     - fc: Fully connected layer for output prediction.
     """
     def __init__(
-        self, input_size=124, hidden_size=64, num_layers=2, output_size=1, dropout=0.2
+        self, input_size=200, hidden_size=64, num_layers=2, output_size=1, dropout=0.2
     ):
         super(LSTMRegressor, self).__init__()
         self.lstm = nn.LSTM(
@@ -205,7 +205,7 @@ class SimpleTransformer(nn.Module):
     - tf2: Second Transformer layer for encoding.
     - decoder: Linear layer for output prediction.
     """
-    def __init__(self, feature_num=124, d_model=96, nhead=4, num_layers=1):
+    def __init__(self, feature_num=200, d_model=96, nhead=8, num_layers=1):
         super(SimpleTransformer, self).__init__()
         self.embedding = nn.Linear(feature_num, d_model)
         self.tf1 = nn.Transformer(
@@ -215,7 +215,7 @@ class SimpleTransformer(nn.Module):
             batch_first=True,
         )
         self.fc = nn.Linear(d_model, d_model)
-        self.dropout = nn.Dropout(0.5)
+        self.dropout = nn.Dropout(0.25)
         self.tf2 = nn.Transformer(
             d_model=d_model,
             nhead=nhead,
@@ -239,6 +239,7 @@ class SimpleTransformer(nn.Module):
 class TimeSeriesTransformer(nn.Module):
     """
     TimeSeriesTransformer: PyTorch Transformer-based Neural Network for Time Series Forecasting.  This did not work well
+    since the pooling action can inhibit learning from surrounding information.
     
     Parameters:
     - feature_num: Number of input features.
@@ -312,7 +313,7 @@ class TimeSeriesTransformer(nn.Module):
 
 class ThreeLayerTransformer(nn.Module):
     """
-    ThreeLayerTransformer: PyTorch Transformer-based Neural Network for Sequence-to-Sequence Tasks
+    ThreeLayerTransformer: PyTorch Transformer-based Neural Network for Sequence-to-Sequence Tasks adding another transformer layer
     
     Parameters:
     - feature_num: Number of input features.
@@ -326,9 +327,10 @@ class ThreeLayerTransformer(nn.Module):
     - fc: Fully connected layer with dropout for additional feature processing.
     - dropout: Dropout layer to prevent overfitting.
     - tf2: Second Transformer layer for encoding.
+    - tf3: Third Transformer layer for encoding.
     - decoder: Linear layer for output prediction.
     """
-    def __init__(self, feature_num=124, d_model=96, nhead=8, num_layers=1):
+    def __init__(self, feature_num=200, d_model=96, nhead=8, num_layers=1):
         super(ThreeLayerTransformer, self).__init__()
         self.embedding = nn.Linear(feature_num, d_model)
         self.tf1 = nn.Transformer(
