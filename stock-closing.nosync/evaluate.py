@@ -1,7 +1,8 @@
+# Bronte Sihan Li, Cole Crescas Dec 2023
+# CS7180
 import torch
 from pathlib import Path
 import os
-import numpy as np
 from tqdm import tqdm
 from dataset import StockDataset
 from models import (

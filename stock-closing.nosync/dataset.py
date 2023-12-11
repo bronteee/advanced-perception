@@ -1,8 +1,10 @@
+# Bronte Sihan Li, Cole Crescas Dec 2023
+# CS7180
+
 import torch
 import pandas as pd
 import numpy as np
 import tensorflow as tf
-from typing import Literal
 from sklearn.preprocessing import StandardScaler
 
 DATA_FILE_DIR = './data/train_added_features.csv'

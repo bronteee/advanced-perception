@@ -1,3 +1,5 @@
+# Bronte Sihan Li, Cole Crescas Dec 2023
+# CS7180
 import wandb
 import gc
 import torch
@@ -18,7 +20,7 @@ from evaluate import evaluate, model_mapping
 import pytorch_warmup as warmup
 from wandb import Artifact
 from tqdm import tqdm
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import random_split
 from typing import Literal
 from sklearn.preprocessing import StandardScaler
 import pandas as pd

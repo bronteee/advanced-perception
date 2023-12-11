@@ -1,8 +1,9 @@
+# Bronte Sihan Li, Cole Crescas Dec 2023
+# CS7180
+
 import torch
 import torch.nn as nn
 import torch
-from torch.autograd import grad
-from dataset import StockDataset, DATA_FILE_DIR
 from s4.s4d_torch import S4D
 
 
