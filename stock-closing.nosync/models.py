@@ -3,8 +3,6 @@
 
 import torch
 import torch.nn as nn
-import torch
-from s4.s4d_torch import S4D
 
 
 class ResCNN(nn.Module):
@@ -66,89 +64,6 @@ class ResCNN(nn.Module):
         out = self.fc2(out)
         out = self.tanh(out)  # TODO: Do we need this?
         return out
-
-
-class StockS4(nn.Module):
-    """
-    We did not use this model due to added complexity
-    """
-
-    def __init__(
-        self,
-        d_input=1,  # Number of channels, 1 for this dataset
-        d_output=200,  # Number of outputs, 1 for this dataset
-        d_model=256,
-        n_layers=4,
-        dropout=0.2,
-        prenorm=False,
-        lr=0.001,
-    ):
-        super().__init__()
-
-        self.prenorm = prenorm
-        self.lr = lr
-
-        # Linear encoder (d_input = 1 for grayscale and 3 for RGB)
-        self.encoder = nn.Linear(d_input, d_model)
-
-        # Stack S4 layers as residual blocks
-        self.s4_layers = nn.ModuleList()
-        self.norms = nn.ModuleList()
-        self.dropouts = nn.ModuleList()
-        for _ in range(n_layers):
-            self.s4_layers.append(
-                S4D(d_model, dropout=dropout, transposed=True, lr=min(0.001, self.lr))
-            )
-            self.norms.append(nn.LayerNorm(d_model))
-            self.dropouts.append(nn.Dropout(dropout))
-
-        # Linear decoder
-        self.decoder = nn.Linear(d_model, d_output)
-
-    def forward(self, x):
-        """
-        Input x is shape (Batch, Length, d_input)
-        """
-        # print(x.shape)
-        x = x.view(
-            x.shape[0],
-            -1,
-            1,  # Reshape to (Batch, Length, d_input=1) for our data set
-        )
-        # print(x.shape)
-        x = self.encoder(x)  # (B, L, d_input) -> (B, L, d_model)
-
-        x = x.transpose(-1, -2)  # (B, L, d_model) -> (B, d_model, L)
-        for layer, norm, dropout in zip(self.s4_layers, self.norms, self.dropouts):
-            # Each iteration of this loop will map (B, d_model, L) -> (B, d_model, L)
-
-            z = x
-            if self.prenorm:
-                # Prenorm
-                z = norm(z.transpose(-1, -2)).transpose(-1, -2)
-
-            # Apply S4 block: we ignore the state input and output
-            z, _ = layer(z)
-
-            # Dropout on the output of the S4 block
-            z = dropout(z)
-
-            # Residual connection
-            x = z + x
-
-            if not self.prenorm:
-                # Postnorm
-                x = norm(x.transpose(-1, -2)).transpose(-1, -2)
-
-        x = x.transpose(-1, -2)
-
-        # Pooling: average pooling over the sequence length
-        x = x.mean(dim=1)
-
-        # Decode the outputs
-        x = self.decoder(x)  # (B, d_model) -> (B, d_output)
-
-        return x
 
 
 class LSTMRegressor(nn.Module):
@@ -379,16 +294,3 @@ class ThreeLayerTransformer(nn.Module):
         x = self.decoder(x)
         return x
 
-
-if __name__ == '__main__':
-    # Test the model
-    # model = ResCNN(target_series=True)
-    # model = StockS4()
-    # model = LSTMRegressor(input_size=200, output_size=200)
-    # model = SimpleTransformer(feature_num=200)
-    model = TimeSeriesTransformer(feature_num=200)
-
-    # Test on random input
-    x = torch.randn(64, 1, 55, 200)
-    output = model(x)
-    print(output.shape)
