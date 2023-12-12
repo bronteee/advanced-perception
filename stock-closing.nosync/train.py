@@ -1,3 +1,5 @@
+# Bronte Sihan Li, Cole Crescas Dec 2023
+# CS7180
 import wandb
 import gc
 import torch
@@ -18,7 +20,7 @@ from evaluate import evaluate, model_mapping
 import pytorch_warmup as warmup
 from wandb import Artifact
 from tqdm import tqdm
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import random_split
 from typing import Literal
 from sklearn.preprocessing import StandardScaler
 import pandas as pd
@@ -277,9 +279,10 @@ def train(
                             {'val loss': val_loss, 'step': global_step, 'epoch': epoch}
                         )
                         if save_checkpoint:
-                            Path(
+                            save_dir = Path(
                                 dir_checkpoint, model.__class__.__name__, dataset_type
-                            ).mkdir(parents=True, exist_ok=True)
+                            )
+                            save_dir.mkdir(parents=True, exist_ok=True)
                             state_dict = model.state_dict()
                             torch.save(
                                 {
@@ -287,7 +290,7 @@ def train(
                                     'optimizer_state_dict': optimizer.state_dict(),
                                     'epoch': epoch,
                                 },
-                                f'{str(dir_checkpoint)}/checkpoint_epoch{epoch+starting_epoch}_{val_loss}.pth',
+                                f'{str(save_dir)}/checkpoint_epoch{epoch+starting_epoch}_{val_loss}.pth',
                             )
                             experiment.log_artifact(
                                 Artifact(
@@ -311,6 +314,7 @@ def main(
     val_percent=0.2,
     amp=False,
     model_type: Literal['s4', 'rescnn', 'lstm', 'transformer'] = 's4',
+    save_checkpoint=False,
 ):
     optimizer = 's4' if model_type == 's4' else 'adamw'
     optimizer_state_dict = None
@@ -340,6 +344,7 @@ def main(
         optimizer_state_dict=optimizer_state_dict,
         loss_function=loss_function,
         activation=activation,
+        save_checkpoint=save_checkpoint,
     )
 
 
@@ -351,4 +356,5 @@ if __name__ == '__main__':
     parser.add_argument('--val_percent', type=float, default=0.2)
     parser.add_argument('--amp', action='store_false')
     parser.add_argument('--model_type', type=str, default='lstm_ts')
+    parser.add_argument('--save_checkpoint', action='store_false')
     main(**vars(parser.parse_args()))

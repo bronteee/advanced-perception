@@ -1,8 +1,10 @@
+# Bronte Sihan Li, Cole Crescas Dec 2023
+# CS7180
+
 import torch
 import pandas as pd
 import numpy as np
 import tensorflow as tf
-from typing import Literal
 from sklearn.preprocessing import StandardScaler
 
 DATA_FILE_DIR = './data/train_added_features.csv'
@@ -84,17 +86,3 @@ class TargetTimeSeriesDataset(torch.utils.data.Dataset):
             self.series[index + self.window_size],
         )
 
-
-if __name__ == '__main__':
-    # Test windowed dataset
-    scaler = StandardScaler()
-    scaler.fit(pd.read_csv(TRAIN_TARGET_SERIES_DATA_FILE_DIR).to_numpy())
-    dataset = TargetTimeSeriesDataset(TRAIN_TARGET_SERIES_DATA_FILE_DIR, scaler=scaler)
-    print(len(dataset))
-    train_loader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True)
-    for batch_idx, (data, target) in enumerate(train_loader):
-        print(data.shape)
-        print(target.shape)
-        print(target)
-        print(batch_idx)
-        break

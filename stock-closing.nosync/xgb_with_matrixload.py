@@ -1,9 +1,12 @@
+# Bronte Sihan Li, Cole Crescas Dec 2023
+# CS7180
+
 import xgboost as xgb
 import pandas as pd
+import lightgbm as lgb
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import RandomizedSearchCV
-import lightgbm as lgb
 
 # Load the large CSV file
 df = pd.read_csv('/notebooks/rapids/xgboost/train_added_features.csv')
@@ -15,7 +18,9 @@ X = df.drop(target_column, axis=1)
 y = df[target_column]
 
 # Split the data into training and testing sets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
 
 # Create DMatrix for training and testing
 dtrain = xgb.DMatrix(X_train, label=y_train)
@@ -36,7 +41,13 @@ xgb_reg = xgb.XGBRegressor()
 
 # Use RandomizedSearchCV for hyperparameter tuning
 random_search = RandomizedSearchCV(
-    xgb_reg, param_distributions=param_dist, n_iter=10, scoring='neg_mean_absolute_error', cv=3, verbose=1, n_jobs=-1
+    xgb_reg,
+    param_distributions=param_dist,
+    n_iter=10,
+    scoring='neg_mean_absolute_error',
+    cv=3,
+    verbose=1,
+    n_jobs=-1,
 )
 
 # Fit the model to the training data
@@ -56,7 +67,7 @@ y_pred = best_model.predict(dtest)
 mae = mean_absolute_error(y_test, y_pred)
 print(f'Mean Absolute Error with Hyperparameter Tuning with XGBoost: {mae}')
 
-#------------------------------ Light GBM model -------------------------------------------
+# ------------------------------ Light GBM model -------------------------------------------
 
 # LightGBM dataset
 train_data = lgb.Dataset(X_train, label=y_train)

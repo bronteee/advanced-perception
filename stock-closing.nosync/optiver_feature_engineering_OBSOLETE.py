@@ -1,4 +1,6 @@
-# -*- coding: utf-8 -*-
+# Bronte Sihan Li, Cole Crescas Dec 2023
+# CS7180
+
 """
 Setup:
 The script checks for GPU availability, sets up global constants, and utilizes various libraries, such as Pandas, Numba, and Torch
@@ -23,19 +25,16 @@ import pandas as pd
 import numpy as np
 from typing import Literal
 import gc  # Garbage collection for memory management
-import time  # Time-related functions
 import warnings  # Handling warnings
 from itertools import combinations  # For creating combinations of elements
 from warnings import simplefilter  # Simplifying warning handling
-from sklearn.metrics import mean_absolute_error  # Metric for evaluation
-from sklearn.model_selection import KFold, TimeSeriesSplit  # Cross-validation techniques
 import torch
-from torch.utils.data import Dataset
 from numba import njit, prange
 
 # Disable warnings to keep the code clean
 warnings.filterwarnings("ignore")
 simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
+
 
 def reduce_mem_usage(df, verbose=1):
     """
@@ -70,9 +69,15 @@ def reduce_mem_usage(df, verbose=1):
                     df[col] = df[col].astype(np.int64)
             else:
                 # Check if the column's data type is a float
-                if c_min > np.finfo(np.float16).min and c_max < np.finfo(np.float16).max:
+                if (
+                    c_min > np.finfo(np.float16).min
+                    and c_max < np.finfo(np.float16).max
+                ):
                     df[col] = df[col].astype(np.float32)
-                elif c_min > np.finfo(np.float32).min and c_max < np.finfo(np.float32).max:
+                elif (
+                    c_min > np.finfo(np.float32).min
+                    and c_max < np.finfo(np.float32).max
+                ):
                     df[col] = df[col].astype(np.float32)
                 else:
                     df[col] = df[col].astype(np.float32)
@@ -88,6 +93,7 @@ def reduce_mem_usage(df, verbose=1):
     # Return the DataFrame with optimized memory usage
     return df
 
+
 def sizesum_and_pricestd(df):
     """
     Takes in a dataframe to add rolling features for sum and std deviation of the
@@ -99,17 +105,29 @@ def sizesum_and_pricestd(df):
     Returns:
         df: dataframe with added fields
     """
-    rolled_size = df[['stock_id'] + SIZE_FTRS].groupby('stock_id').rolling(window=6, min_periods=1).sum()
+    rolled_size = (
+        df[['stock_id'] + SIZE_FTRS]
+        .groupby('stock_id')
+        .rolling(window=6, min_periods=1)
+        .sum()
+    )
     rolled_size = rolled_size.reset_index(level=0, drop=True)
     for col in SIZE_FTRS:
         df[f'{col}_rolled_sum'] = rolled_size[col]
 
-    rolled_price = df[['stock_id'] + PRICE_FTRS].groupby('stock_id').rolling(window=6, min_periods=1).std().fillna(0)
+    rolled_price = (
+        df[['stock_id'] + PRICE_FTRS]
+        .groupby('stock_id')
+        .rolling(window=6, min_periods=1)
+        .std()
+        .fillna(0)
+    )
     rolled_price = rolled_price.reset_index(level=0, drop=True)
     for col in PRICE_FTRS:
         df[f'{col}_rolled_std'] = rolled_price[col]
 
     return df
+
 
 # Function to compute triplet imbalance in parallel using Numba
 @njit(parallel=True)
@@ -136,7 +154,9 @@ def compute_triplet_imbalance(df_values, comb_indices):
         for j in range(num_rows):
             max_val = max(df_values[j, a], df_values[j, b], df_values[j, c])
             min_val = min(df_values[j, a], df_values[j, b], df_values[j, c])
-            mid_val = df_values[j, a] + df_values[j, b] + df_values[j, c] - min_val - max_val
+            mid_val = (
+                df_values[j, a] + df_values[j, b] + df_values[j, c] - min_val - max_val
+            )
 
             # Prevent division by zero
             if mid_val == min_val:
@@ -146,11 +166,15 @@ def compute_triplet_imbalance(df_values, comb_indices):
 
     return imbalance_features
 
+
 # Function to calculate triplet imbalance for given price data and a DataFrame
 def calculate_triplet_imbalance_numba(price, df):
     # Convert DataFrame to numpy array for Numba compatibility
     df_values = df[price].values
-    comb_indices = [(price.index(a), price.index(b), price.index(c)) for a, b, c in combinations(price, 3)]
+    comb_indices = [
+        (price.index(a), price.index(b), price.index(c))
+        for a, b, c in combinations(price, 3)
+    ]
 
     # Calculate the triplet imbalance using the Numba-optimized function
     features_array = compute_triplet_imbalance(df_values, comb_indices)
@@ -159,14 +183,15 @@ def calculate_triplet_imbalance_numba(price, df):
     columns = [f"{a}_{b}_{c}_imb2" for a, b, c in combinations(price, 3)]
     return pd.DataFrame(features_array, columns=columns)
 
+
 # Function to generate imbalance features
 def imbalance_features(df):
     """
     Calculate various imbalance features using Pandas eval function and statistical aggregations.
-    
+
     Parameters:
     - df (pd.DataFrame): Input DataFrame containing stock data.
-    
+
     Returns:
     - df (pd.DataFrame): DataFrame with added imbalance features.
     """
@@ -177,9 +202,11 @@ def imbalance_features(df):
     # V1 features
     # Calculate various features using Pandas eval function
     df["volume"] = df.eval("ask_size + bid_size")
-    df["mid_price"] = df.eval("ask_price + bid_price")/2
+    df["mid_price"] = df.eval("ask_price + bid_price") / 2
     df["liquidity_imbalance"] = df.eval("(bid_size-ask_size)/(bid_size+ask_size)")
-    df["matched_imbalance"] = df.eval("imbalance_size-matched_size")/df.eval("matched_size+imbalance_size")
+    df["matched_imbalance"] = df.eval("imbalance_size-matched_size") / df.eval(
+        "matched_size+imbalance_size"
+    )
     df["size_imbalance"] = df.eval("bid_size / ask_size")
 
     # Create features for pairwise price imbalances
@@ -188,18 +215,27 @@ def imbalance_features(df):
 
     # V2 features
     # Calculate additional features
-    df["imbalance_momentum"] = df.groupby(['stock_id'])['imbalance_size'].diff(periods=1) / df['matched_size']
+    df["imbalance_momentum"] = (
+        df.groupby(['stock_id'])['imbalance_size'].diff(periods=1) / df['matched_size']
+    )
     df["price_spread"] = df["ask_price"] - df["bid_price"]
     df["spread_intensity"] = df.groupby(['stock_id'])['price_spread'].diff()
     df['price_pressure'] = df['imbalance_size'] * (df['ask_price'] - df['bid_price'])
     df['market_urgency'] = df['price_spread'] * df['liquidity_imbalance']
-    df['depth_pressure'] = (df['ask_size'] - df['bid_size']) * (df['far_price'] - df['near_price'])
+    df['depth_pressure'] = (df['ask_size'] - df['bid_size']) * (
+        df['far_price'] - df['near_price']
+    )
 
     # Calculate various statistical aggregation features
 
     # V3 features
     # Calculate shifted and return features for specific columns
-    for col in ['matched_size', 'imbalance_size', 'reference_price', 'imbalance_buy_sell_flag']:
+    for col in [
+        'matched_size',
+        'imbalance_size',
+        'reference_price',
+        'imbalance_buy_sell_flag',
+    ]:
         for window in [1, 2, 3, 10]:
             df[f"{col}_shift_{window}"] = df.groupby('stock_id')[col].shift(window)
             df[f"{col}_ret_{window}"] = df.groupby('stock_id')[col].pct_change(window)
@@ -213,13 +249,14 @@ def imbalance_features(df):
     # Replace infinite values with 0
     return df.replace([np.inf, -np.inf], 0)
 
+
 def numba_imb_features(df):
     """
     Calculate imbalance features using Numba-optimized functions.
-    
+
     Parameters:
     - df (pd.DataFrame): Input DataFrame containing stock data.
-    
+
     Returns:
     - df (pd.DataFrame): DataFrame with added imbalance features.
     """
@@ -234,6 +271,7 @@ def numba_imb_features(df):
         df[triplet_feature.columns] = triplet_feature.values
     return df
 
+
 # Function to generate time and stock-related features
 def other_features(df):
     """
@@ -243,7 +281,7 @@ def other_features(df):
     df["seconds"] = df["seconds_in_bucket"] % 60  # Seconds
     df["minute"] = df["seconds_in_bucket"] // 60  # Minutes
 
-    #Adding per stock features grouped my stock
+    # Adding per stock features grouped my stock
     g_ask_size_median = df.groupby("stock_id")["ask_size"].median()
     g_ask_size_std = df.groupby("stock_id")["ask_size"].std()
     g_ask_size_min = df.groupby("stock_id")["ask_size"].min()
@@ -252,7 +290,7 @@ def other_features(df):
     g_bid_size_std = df.groupby("stock_id")["bid_size"].std()
     g_bid_size_min = df.groupby("stock_id")["bid_size"].min()
     g_bid_size_max = df.groupby("stock_id")["bid_size"].max()
-    #Aggregate from all features
+    # Aggregate from all features
     global_stock_id_feats = {
         "median_size": g_bid_size_median + g_ask_size_median,
         "std_size": g_bid_size_std + g_ask_size_std,
@@ -285,12 +323,17 @@ def generate_all_features(df):
     gc.collect()  # Perform garbage collection to free up memory
 
     # Select and return the generated features
-    feature_name = [i for i in df.columns if i not in ["row_id", "target", "time_id", "date_id"]]
+    feature_name = [
+        i for i in df.columns if i not in ["row_id", "target", "time_id", "date_id"]
+    ]
     return df[feature_name]
 
+
 def load_and_clean_data(
-    data_filepath: str, fillna: Literal['zero', 'mean', 'median'] = 'median',
-    add_features_flag: bool = True) -> pd.DataFrame:
+    data_filepath: str,
+    fillna: Literal['zero', 'mean', 'median'] = 'median',
+    add_features_flag: bool = True,
+) -> pd.DataFrame:
     """
     Load and clean data from csv file.
     Args:
@@ -307,7 +350,6 @@ def load_and_clean_data(
 
     data['far_price'].fillna(0, inplace=True)
     data['near_price'].fillna(1, inplace=True)
-
 
     if fillna == 'zero':
         # Replace all NaN values with 0
@@ -326,14 +368,15 @@ def load_and_clean_data(
 
     data = reduce_mem_usage(data)
 
-    #this will call a series of methods that will add features
+    # this will call a series of methods that will add features
     if add_features_flag:
         data = sizesum_and_pricestd(data)
         data_with_ftrs = generate_all_features(data)
 
     return data_with_ftrs
 
-#---------------------------------- GLOBALS ------------------------------------
+
+# ---------------------------------- GLOBALS ------------------------------------
 
 IS_CUDA = torch.cuda.is_available()
 NB_CARDS = torch.cuda.device_count()
@@ -349,27 +392,37 @@ MAX_SECONDS = 55  # Maximum number of seconds * 10 in a window
 
 NO_FEATURE_COLS = ['date_id', 'time_id', 'target']
 
-PRICE_FTRS = ["reference_price", "far_price", "near_price", "ask_price", "bid_price", "wap"] #sum
-SIZE_FTRS = ["matched_size", "bid_size", "ask_size", "imbalance_size"] #std
+PRICE_FTRS = [
+    "reference_price",
+    "far_price",
+    "near_price",
+    "ask_price",
+    "bid_price",
+    "wap",
+]  # sum
+SIZE_FTRS = ["matched_size", "bid_size", "ask_size", "imbalance_size"]  # std
 
 # MAY NEED TO RUN THIS for cudf:
 # https://colab.research.google.com/drive/1TAAi_szMfWqRfHVfjGSqnGVLr_ztzUM9#scrollTo=bvcxjJOCX1tL
 
 # --------------------------- END SETUP -----------------------------------------
-#this will reduce memory usage before features, add all features and then call
-#all methods above.
+# this will reduce memory usage before features, add all features and then call
+# all methods above.
 df_train = load_and_clean_data(DATA_FILE_DIR)
 
-#should reduce memory usage by around 25%, taken from here: https://www.kaggle.com/code/jirkaborovec/optiver-features-torch-dnn-infer-tabular
+# should reduce memory usage by around 25%, taken from here: https://www.kaggle.com/code/jirkaborovec/optiver-features-torch-dnn-infer-tabular
 df_train_feats = reduce_mem_usage(df_train)
 
-df_train_feats.to_csv('/notebooks/advanced-perception/stock-closing.nosync/data/train_added_features.csv', index=False)
+df_train_feats.to_csv(
+    '/notebooks/advanced-perception/stock-closing.nosync/data/train_added_features.csv',
+    index=False,
+)
 
-#Below has been commented out since it is not needed
+# Below has been commented out since it is not needed
 
-#df_train_target = data['target'].astype(np.float16)
+# df_train_target = data['target'].astype(np.float16)
 # We need to use the date_id from df_train to split the data
-#df_train_date_ids = df_train['date_id'].values
+# df_train_date_ids = df_train['date_id'].values
 # Free up memory by deleting
 # del df_train
 # gc.collect()
@@ -381,17 +434,21 @@ df_train_feats.to_csv('/notebooks/advanced-perception/stock-closing.nosync/data/
 # df_train_feats.head()
 
 
-#This block is done after the data is already created from methods and code blocks below
+# This block is done after the data is already created from methods and code blocks below
 
-data = pd.read_csv('/notebooks/advanced-perception/stock-closing.nosync/data/train_added_features.csv')
+data = pd.read_csv(
+    '/notebooks/advanced-perception/stock-closing.nosync/data/train_added_features.csv'
+)
 
 FEATURE_NAMES = list(df_train_feats.columns)
 print(f"Feature length = {len(FEATURE_NAMES)} as {sorted(FEATURE_NAMES)}")
 
 df_train_feats.head()
 
-#Load two data frames and append the columns dropped during feature creation
-data = pd.read_csv('/notebooks/advanced-perception/stock-closing.nosync/data/train_added_features.csv')
+# Load two data frames and append the columns dropped during feature creation
+data = pd.read_csv(
+    '/notebooks/advanced-perception/stock-closing.nosync/data/train_added_features.csv'
+)
 
 df2 = pd.read_csv('/notebooks/advanced-perception/stock-closing.nosync/data/train.csv')
 
@@ -399,6 +456,9 @@ columns_to_append = df2[['target', 'time_id', 'date_id']]
 
 data = pd.concat([data, columns_to_append], axis=1)
 
-#save final dataframe to be used in model training
-data.to_csv('/notebooks/advanced-perception/stock-closing.nosync/data/train_added_features.csv', index=False)
+# save final dataframe to be used in model training
+data.to_csv(
+    '/notebooks/advanced-perception/stock-closing.nosync/data/train_added_features.csv',
+    index=False,
+)
 print(data.shape)

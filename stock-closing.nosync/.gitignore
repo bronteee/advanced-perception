@@ -4,3 +4,4 @@
 .vscode/
 /literature/
 /wandb/
+.DS_Store

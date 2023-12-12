@@ -1,21 +1,27 @@
+# Bronte Sihan Li, Cole Crescas Dec 2023
+# CS7180
 import torch
 from pathlib import Path
 import os
-import numpy as np
 from tqdm import tqdm
 from dataset import StockDataset
-from models import ResCNN, StockS4, LSTMRegressor, SimpleTransformer, TimeSeriesTransformer, ThreeLayerTransformer
+from models import (
+    ResCNN,
+    LSTMRegressor,
+    SimpleTransformer,
+    TimeSeriesTransformer,
+    ThreeLayerTransformer,
+)
 
 model_mapping = {
     'rescnn': ResCNN(target_series=False),
     'rescnn_ts': ResCNN(target_series=True),
-    's4': StockS4(),
     'lstm': LSTMRegressor(),
     'lstm_ts': LSTMRegressor(input_size=200, output_size=200),
     'transformer': SimpleTransformer(),
-    'transformer_ts': SimpleTransformer(feature_num=200),
-    'transformer_improved': TimeSeriesTransformer(feature_num=200),
-    'ThreeLayerTransformer': ThreeLayerTransformer(feature_num=200)
+    'transformer_ts': SimpleTransformer(feature_num=200, dropout_rate=0.25),
+    'transformer_improved': TimeSeriesTransformer(feature_num=200, dropout_rate=0.25),
+    'ThreeLayerTransformer': ThreeLayerTransformer(feature_num=200, dropout_rate=0.25),
 }
 
 TEST_DATA_DIR = Path('./data/train.csv')
@@ -34,6 +40,9 @@ def evaluate(
     amp=False,
     save_predictions=False,
 ):
+    """
+    Evaluate a model on a validation set.
+    """
     save_dir = Path(f'predictions_{net.__class__.__name__}')
     os.makedirs(save_dir, exist_ok=True)
     net.eval()
@@ -70,27 +79,43 @@ def evaluate(
     return val_loss / max(num_val_batches, 1)
 
 
-def main():
-    checkpoint_file = 'checkpoint_epoch2_6.473762512207031.pth'
-    model_type = 'rescnn'
-    criterion = torch.nn.L1Loss()
-    # Instantiate the model
-    checkpoint_dir = './checkpoints'
-    model = model_mapping[model_type]
-    # Load the model checkpoint
-    model_state_dict = torch.load(f'{checkpoint_dir}/{checkpoint_file}')[
-        'model_state_dict'
-    ]
-    model.load_state_dict(model_state_dict)
-    # Load the test data
-    test_set = StockDataset(TEST_DATA_DIR)
-    test_loader = torch.utils.data.DataLoader(test_set, batch_size=128, shuffle=False)
-    # Evaluate the model
+def calculate_inference_time(model):
+    """
+    Calculates inference time / throughput for a given model
+    """
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    val_loss = evaluate(
-        model, test_loader, device, False, 128, criterion, len(test_set), False
-    )
-    print(f'Validation loss: {val_loss}')
+    dummy_input = torch.randn(32, 1, 200, 200).to(device)
+    model.to(device)
+    repetitions = 100
+    total_time = 0
+    with torch.no_grad():
+        for rep in range(repetitions):
+            starter, ender = torch.cuda.Event(enable_timing=True), torch.cuda.Event(
+                enable_timing=True
+            )
+            starter.record()
+            _ = model(dummy_input)
+            ender.record()
+            torch.cuda.synchronize()
+            curr_time = starter.elapsed_time(ender) / 1000
+            total_time += curr_time
+    Throughput = (repetitions * 32) / total_time
+    print('Final Throughput:', Throughput)
+
+
+def main():
+    for model_name in [
+        'lstm_ts',
+        'transformer_ts',
+        'transformer_improved',
+        'ThreeLayerTransformer',
+    ]:
+        model = model_mapping[model_name]
+        model.eval()
+        print(model_name)
+        params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        print(f'Number of parameters: {params}')
+        calculate_inference_time(model)
 
 
 if __name__ == '__main__':
