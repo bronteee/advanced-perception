@@ -17,7 +17,8 @@ To install dependencies, run:
 
 ## Data
 
-The data used in this project is available from the Optiver Kaggle competition [here](https://www.kaggle.com/competitions/optiver-trading-at-the-close/).
+The data used in this project is available from the Optiver Kaggle competition [here](https://www.kaggle.com/competitions/optiver-trading-at-the-close/).  In addition,
+our windowed dataset transformation is in a zip file in the data folder
 
 ## dataset.py
 
