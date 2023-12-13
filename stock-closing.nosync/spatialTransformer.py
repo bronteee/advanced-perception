@@ -213,9 +213,12 @@ best_tft = TemporalFusionTransformer.load_from_checkpoint(best_model_path)
 predictions = best_tft.predict(val_dataloader, return_y=True, trainer_kwargs=dict(accelerator="gpu"))
 print(len(predictions.y))
 
+#importing the unscaled df to fit the scalar
+train_unscaled = pd.read_csv('/content/drive/MyDrive/train_target_series.csv')
+
 #Inverse transform output to calculate MAE
 scaler =  StandardScaler()
-scaler.fit(valid_series.drop(columns=["time_step", "dummy_constant"]))
+scaler.fit(train_unscaled)
 trans_y = scaler.inverse_transform(predictions.y[0][0].cpu())
 trans_out = scaler.inverse_transform(predictions.output[0][0].cpu().unsqueeze(0))
 
