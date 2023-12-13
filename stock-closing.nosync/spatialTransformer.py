@@ -17,12 +17,15 @@ import torch
 
 from pytorch_forecasting import Baseline, TemporalFusionTransformer, TimeSeriesDataSet
 from pytorch_forecasting.data import GroupNormalizer
-from pytorch_forecasting.metrics import MAE, SMAPE, PoissonLoss
+from pytorch_forecasting.metrics import MAE, QuantileLoss
+from sklearn.preprocessing import StandardScaler
 #from pytorch_forecasting.models.temporal_fusion_transformer.tuning import optimize_hyperparameters
 
+#Initialize Data
 target_series = pd.read_csv('/content/drive/MyDrive/train_target_series.csv')
 valid_series = pd.read_csv('/content/drive/MyDrive/valid_target_series.csv')
 
+#Reduce memory usage by converting to reduced data types
 def reduce_mem_usage(df, verbose=0):
     start_mem = df.memory_usage().sum() / 1024**2
 
@@ -55,41 +58,58 @@ def reduce_mem_usage(df, verbose=0):
 
     return df
 
+#Initialize stardscalar on the target series
+scaler =  StandardScaler()
+scaler.fit(target_series)
+
+#remove null values, reduce memory & transformer on the target series 
 target_series.fillna(0, inplace=True)
 target_series = reduce_mem_usage(target_series, verbose=1)
+target_series = scaler.fit_transform(target_series)
 
+#remove null values, reduce memory & transformer on the valid series 
 valid_series.fillna(0, inplace=True)
 valid_series = reduce_mem_usage(valid_series, verbose=1)
+valid_series = scaler.transform(valid_series)
 
-target_series.columns = target_series.columns.astype(str) 
+target_series = pd.DataFrame(target_series)
+valid_series = pd.DataFrame(valid_series)
+
+#Converting the column types from ints to string to be passed into the model & add a time stamp column & dummy 
+#to pass into the group field for multitarget prediction in the TFT
+target_series.columns = target_series.columns.astype(str)
 target_series.reset_index(level=0, inplace=True)
 target_series.rename(columns={'index': 'time_step'}, inplace=True)
 target_series["dummy_constant"] = 1
-target_series.head()
+#target_series.head()
 
+#Converting the column types from ints to string to be passed into the model & add a time stamp column & dummy 
+#to pass into the group field for multitarget prediction in the TFT
 valid_series.columns = valid_series.columns.astype(str) 
 valid_series.reset_index(level=0, inplace=True)
 valid_series.rename(columns={'index': 'time_step'}, inplace=True)
 valid_series["dummy_constant"] = 1
-valid_series.head()
+#valid_series.head()
 
-# Define the target columns
-target_columns = [col for col in target_series.columns if col not in ["time_Step"]]
+# Define the target columns as all columns except the timestamp and dummy constant
+target_columns = [col for col in target_series.columns if col not in ["time_step", "dummy_constant"]]
 print(target_columns)
 
-# Create a TimeSeriesDataSet
+
+# Create a TimeSeriesDataSet using all stock windows as the target column, the dummy constant passed into group_ids 
 training = TimeSeriesDataSet(
     target_series,
-    time_idx="time_step",  
+    time_idx="time_step",
     target=target_columns,
     group_ids=["dummy_constant"],
-    min_encoder_length=24,  
-    max_encoder_length=48, 
+    min_encoder_length=24,
+    max_encoder_length=48,
     min_prediction_length=1,
-    max_prediction_length=24, 
+    max_prediction_length=200, #setting prediciton length of all 200 stocks
     #time_varying_unknown_reals=target_columns,
     #time_varying_known_reals=["seconds_in_bucket"],
-    allow_missing_timesteps=True,
+    allow_missing_timesteps=True, #need to run
+    add_relative_time_idx = True, #needed 
 )
 
 validation = TimeSeriesDataSet.from_dataset(training, valid_series, predict=True, stop_randomization=True)
@@ -102,38 +122,25 @@ val_dataloader = validation.to_dataloader(train=False, batch_size=batch_size * 1
 # configure network and trainer
 pl.seed_everything(42)
 trainer = pl.Trainer(
-    accelerator="cpu",
+    accelerator="gpu",
     # clipping gradients is a hyperparameter and important to prevent divergance
     # of the gradient for recurrent neural networks
     gradient_clip_val=0.1,
 )
 
+#Setup mock TFT to find the optimal learning rate
 tft = TemporalFusionTransformer.from_dataset(
     training,
     learning_rate=0.03,
     hidden_size=8,
-    attention_head_size=1,
+    attention_head_size=2,
     dropout=0.1,
     hidden_continuous_size=8,
-    loss=MAE(),
-    optimizer="Ranger"
-)
-
-
-tft = TemporalFusionTransformer.from_dataset(
-    training,
-    # not meaningful for finding the learning rate but otherwise very important
-    learning_rate=0.03,
-    hidden_size=8,  # most important hyperparameter apart from learning rate
-    # number of attention heads. Set to up to 4 for large datasets
-    attention_head_size=2,
-    dropout=0.10,  # between 0.1 and 0.3 are good values
-    hidden_continuous_size=10,  # set to <= hidden_size
-    loss=MAE(),
+    loss=QuantileLoss(),
     optimizer="Ranger",
-    # reduce learning rate if no improvement in validation loss after x epochs
     reduce_on_plateau_patience=10,
 )
+
 print(f"Number of parameters in network: {tft.size()/1e3:.1f}k")
 
 # find optimal learning rate
@@ -151,34 +158,37 @@ print(f"suggested learning rate: {res.suggestion()}")
 fig = res.plot(show=True, suggest=True)
 fig.show()
 
-## configure network and trainer
-#LEARNING_RATE = res.suggestion()
 
-# configure network and trainer
-#early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=1e-4, patience=10, verbose=False, mode="min")
-#lr_logger = LearningRateMonitor()  # log the learning rate
+## configure network and trainer
+LEARNING_RATE = res.suggestion()
+
+# configure network and trainer allowing for logging and learning rate monitors
+early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=1e-4, patience=5, verbose=False, mode="min")
+lr_logger = LearningRateMonitor()  # log the learning rate
 logger = TensorBoardLogger("lightning_logs")  # logging results to a tensorboard
 
+#Setup the trainer with max_epochs optimization  & callbacks
 trainer = pl.Trainer(
     max_epochs=50,
-    accelerator="cpu",
+    accelerator="gpu",
     enable_model_summary=True,
     gradient_clip_val=0.1,
     limit_train_batches=50,  # coment in for training, running valiation every 30 batches
-    # fast_dev_run=True,  # comment in to check that networkor dataset has no serious bugs
-    #callbacks=[lr_logger, early_stop_callback],
+    #fast_dev_run=True,  # comment in to check that networkor dataset has no serious bugs
+    callbacks=[lr_logger, early_stop_callback],
     logger=logger,
 )
 
+#Setup the TFT from the TimeSeriesDataset using the optimal learning rate derived
 tft = TemporalFusionTransformer.from_dataset(
     training,
-    learning_rate=0.2,
+    learning_rate=LEARNING_RATE,
     hidden_size=16,
     attention_head_size=2,
     dropout=0.1,
     hidden_continuous_size=8,
-    loss=MAE(),
-    log_interval=10,  # uncomment for learning rate finder and otherwise, e.g. to 10 for logging every 10 batches
+    loss=QuantileLoss(),
+    #log_interval=10,  # uncomment for learning rate finder and otherwise, e.g. to 10 for logging every 10 batches
     optimizer="Ranger",
     reduce_on_plateau_patience=4,
 )
@@ -191,11 +201,25 @@ trainer.fit(
     val_dataloaders=val_dataloader,
 )
 
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import mean_absolute_error
+
 # load the best model according to the validation loss
 # (given that we use early stopping, this is not necessarily the last epoch)
 best_model_path = trainer.checkpoint_callback.best_model_path
 best_tft = TemporalFusionTransformer.load_from_checkpoint(best_model_path)
 
 # calcualte mean absolute error on validation set
-predictions = best_tft.predict(val_dataloader, return_y=True, trainer_kwargs=dict(accelerator="cpu"))
-MAE()(predictions.output, predictions.y)
+predictions = best_tft.predict(val_dataloader, return_y=True, trainer_kwargs=dict(accelerator="gpu"))
+print(len(predictions.y))
+
+#Inverse transform output to calculate MAE
+scaler =  StandardScaler()
+scaler.fit(valid_series.drop(columns=["time_step", "dummy_constant"]))
+trans_y = scaler.inverse_transform(predictions.y[0][0].cpu())
+trans_out = scaler.inverse_transform(predictions.output[0][0].cpu().unsqueeze(0))
+
+print(type(trans_y), len(trans_out[0]))
+mae = mean_absolute_error(trans_y, trans_out)
+
+print("Mean Absolute Error:", mae)
